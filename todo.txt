@@ -1,0 +1,30 @@
+-) parse overview page U13 and parse names, goals, cards and amount games
+   maybe possible to get player_id ?
+
+-) add code to peronal github
+
++) DONE test if html is rendered -- seems ok now
+
++) DONE make parser to go through html
+<div class="m_g_title_1 t0"><span class="output_normal">Datum, Uhrzeit</span><span class="output_short">Datum</span></div>
+		<div class="m_g_title_1 t1 m_g_hide_mobile"><span class="output_normal">Bewerb</span><span class="output_short">Bewerb</span></div>
+		<div class="m_g_title_1 t2 m_g_hide_mobile"><span class="output_normal">Runde</span><span class="output_short">Runde</span></div>
+		<div class="m_g_title_1 t3"><span class="output_normal">Spiel</span><span class="output_short">Spiel</span></div>
+		<div class="m_g_title_1 t4"><span class="output_normal">Ergebnis</span><span class="output_short">Ergebnis</span></div>
+		<div class="m_g_title_1 t5"><span class="output_normal">Einsatzmin.</span><span class="output_short">Einsatzmin.</span></div>
+		<div class="m_g_title_1 t6"><span class="output_normal">Tore</span><span class="output_short">Tore</span></div>
+
+		
+			<div class="c0 c1_border_left_1"><span class="m_g_text_1">15.11.2025, 11:30 Uhr</span></div>
+			<div class="c1 m_g_hide_mobile"><span class="m_g_text_1">B-LIGA U13</span></div>
+			<div class="c2 m_g_hide_mobile"><span class="m_g_text_1">10</span></div>
+			<div class="c3">
+			
+				<a href="https://www.oefb.at/bewerbe/Spiel/Spielbericht/3892484/?Ostbahn-XI-A-vs-1210-Wien-A" title="Ostbahn XI A - 1210 Wien A">
+					<span class="m_g_text_1">Ostbahn XI A - 1210 Wien A</span>
+				</a>
+			
+			</div>
+			<div class="c4"><span class="m_g_text_1">14:1</span></div>
+			<div class="c5"><span class="m_g_text_1">40</span></div>
+			<div class="c6"><span class="m_g_text_1">1</span></div>
