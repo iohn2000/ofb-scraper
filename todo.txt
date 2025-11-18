@@ -1,7 +1,7 @@
 -) parse overview page U13 and parse names, goals, cards and amount games
    maybe possible to get player_id ?
 
--) add code to peronal github
++) add code to peronal github
 
 +) DONE test if html is rendered -- seems ok now
 
