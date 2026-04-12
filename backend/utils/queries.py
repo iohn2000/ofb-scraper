@@ -122,3 +122,58 @@ def get_player_efficiency(db_path='ofb_stats.db'):
     except Exception as e:
         print(f"Error fetching efficiency data: {e}")
         return []
+
+
+def get_goal_efficiency_per_game(db_path='ofb_stats.db'):
+    """
+    Get goal efficiency per individual game (goals/90min, min/goal, etc.)
+    Sorted by best efficiency first
+    """
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT 
+                p.player_name,
+                g.game_date,
+                g.competition,
+                g.home_team,
+                g.away_team,
+                g.goals,
+                g.minutes_played,
+                ROUND(CAST(g.goals AS FLOAT) / g.minutes_played * 90, 3) as goals_per_90_minutes,
+                ROUND(CAST(g.minutes_played AS FLOAT) / g.goals, 2) as minutes_per_goal
+            FROM 
+                games g
+                JOIN players p ON g.player_id = p.player_id
+            WHERE 
+                g.goals > 0
+                AND g.minutes_played > 0
+            ORDER BY 
+                goals_per_90_minutes DESC,
+                minutes_per_goal ASC,
+                g.game_date DESC
+        ''')
+        
+        results = cursor.fetchall()
+        conn.close()
+        
+        games = []
+        for row in results:
+            games.append({
+                'player_name': row[0],
+                'game_date': row[1],
+                'competition': row[2],
+                'home_team': row[3],
+                'away_team': row[4],
+                'goals': row[5],
+                'minutes_played': row[6],
+                'goals_per_90_minutes': row[7],
+                'minutes_per_goal': row[8]
+            })
+        
+        return games
+    except Exception as e:
+        print(f"Error fetching goal efficiency per game data: {e}")
+        return []
