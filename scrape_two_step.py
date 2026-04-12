@@ -22,6 +22,7 @@ from bs4 import BeautifulSoup
 import re
 import matplotlib.pyplot as plt
 import matplotlib
+import traceback
 matplotlib.use('Agg')  # Use non-interactive backend
 
 def init_database(db_path='ofb_stats.db'):
@@ -518,14 +519,12 @@ def scrape_from_page(player_id, team="U13", year=2026):
             
         except Exception as e:
             print(f"Error parsing HTML: {e}")
-            import traceback
             traceback.print_exc()
         
         return games_data
         
     except Exception as e:
         print(f"Error visiting page: {e}")
-        import traceback
         traceback.print_exc()
         if driver:
             driver.quit()
@@ -650,31 +649,38 @@ if __name__ == "__main__":
     players = [
         { "name": "Kayra Akca",            "id": 1416519, "team": "U13", "year": 2026},
         { "name": "Musab Aslan",           "id": 1501804, "team": "U13", "year": 2026},
-        { "name": "Ledian Avdyli",         "id": 1397521, "team": "U13", "year": 2026},
+        { "name": "Ledian Avdyli",         "id": 1397521, "team": "U13", "year": 2026},        
         { "name": "James Bogner",          "id": 1526240, "team": "U13", "year": 2026},
         { "name": "Alen Bradaric",         "id": 1541676, "team": "U13", "year": 2026},
         { "name": "Burak Candan",          "id": 1492869, "team": "U13", "year": 2026},
-        { "name": "Osman-Demir",           "id": 1452690, "team": "U13", "year": 2026},
-        { "name": "Oskar Doerflinger",     "id": 1397635, "team": "U13", "year": 2026},
+        { "name": "Oskar Doerflinger",     "id": 1397635, "team": "U13", "year": 2026},        
+        #{ "name": "Osman-Demir",           "id": 1452690, "team": "U13", "year": 2026},
         { "name": "Emmanuel-Edosomwan",    "id": 1290321, "team": "U13", "year": 2026},
         { "name": "Burak-Erdal",           "id": 1517009, "team": "U13", "year": 2026},
         { "name": "Oguzhan-Erkoc",         "id": 1208103, "team": "U13", "year": 2026},
         { "name": "Fabricio Facalet",      "id": 1323567, "team": "U13", "year": 2026},
-        { "name": "Liam Fleck",            "id": 1454580, "team": "U13", "year": 2026},
+        { "name": "Liam Fleck",            "id": 1454580, "team": "U13", "year": 2026},        
         { "name": "Ashab Gemici",          "id": 1217525, "team": "U13", "year": 2026},
         { "name": "Berat Cetin Hatunoglu", "id": 1360273, "team": "U13", "year": 2026},
         { "name": "Ismet Inan",            "id": 1366003, "team": "U13", "year": 2026},
         { "name": "Adrian Jarzmik",        "id": 1542533, "team": "U13", "year": 2026},
+        { "name": "Sandi Jusic",           "id": 1351306, "team": "U13", "year": 2026},
+        { "name": "Emir Kaya",             "id": 1418190, "team": "U13", "year": 2026},        
         { "name": "Halil-Keskin",          "id": 1302985, "team": "U13", "year": 2026},
         { "name": "Mert Koese",            "id": 1350034, "team": "U13", "year": 2026},
         { "name": "Valerio Molony",        "id": 1447767, "team": "U13", "year": 2026},
+        { "name": "Mihael Mrkovski",       "id": 1321483, "team": "U13", "year": 2026},
         { "name": "Dominik Muellner",      "id": 1240755, "team": "U13", "year": 2026},
         { "name": "Asaf Ordulu",           "id": 1416861, "team": "U13", "year": 2026},
         { "name": "Anthony Rodriguez",     "id": 1370839, "team": "U13", "year": 2026},
         { "name": "Daniel Strugari",       "id": 1453500, "team": "U13", "year": 2026},
+        { "name": "Emir Temel",            "id": 1424637, "team": "U13", "year": 2026},        
         { "name": "Talha Temiz",           "id": 1449355, "team": "U13", "year": 2026},
         { "name": "Cihangir Tosun",        "id": 1286934, "team": "U13", "year": 2026},
+        { "name": "Timucin Türk",          "id": 1405655, "team": "U13", "year": 2026},
+        { "name": "Alex Watycha",          "id": 1372719, "team": "U13", "year": 2026},
         { "name": "Emir Oegmen",           "id": 1245535, "team": "U13", "year": 2026},                                        
+        { "name": "Seyithan Öztürk",       "id": 1550199, "team": "U13", "year": 2026}
     ]
 
     for player in players:
