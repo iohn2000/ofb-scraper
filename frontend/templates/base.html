@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ÖFB U13 Player Statistics</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Mobile Menu Toggle Button (fixed header) -->
+    <button class="mobile-menu-toggle d-lg-none" type="button" onclick="toggleMobileMenu()">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <div class="d-flex min-vh-100">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar bg-dark" id="sidebarNav">
+            <div class="sidebar-header">
+                <h3 class="text-white mb-4">ÖFB Stats</h3>
+                <button class="close-menu-btn d-lg-none" type="button" onclick="toggleMobileMenu()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="sidebar-menu">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" href="/">
+                            <i class="fas fa-clock"></i> Minutes Played
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'goals' %}active{% endif %}" href="/goals">
+                            <i class="fas fa-futbol"></i> Goals Scored
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'efficiency' %}active{% endif %}" href="/efficiency">
+                            <i class="fas fa-chart-bar"></i> Efficiency Stats
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <div class="main-content flex-grow-1">
+            <div class="container-fluid p-4">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+    <script>
+        // Toggle mobile menu
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('sidebarNav');
+            sidebar.classList.toggle('show');
+            
+            // Close menu when a link is clicked
+            const links = sidebar.querySelectorAll('.nav-link');
+            links.forEach(link => {
+                link.addEventListener('click', () => {
+                    if (window.innerWidth < 1024) {
+                        sidebar.classList.remove('show');
+                    }
+                });
+            });
+        }
+
+        // Close mobile menu when window resizes to desktop
+        window.addEventListener('resize', () => {
+            const sidebar = document.getElementById('sidebarNav');
+            if (window.innerWidth >= 1024) {
+                sidebar.classList.remove('show');
+            }
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

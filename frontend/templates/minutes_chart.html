@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-clock text-primary"></i> Total Minutes Played by Player
+        </h1>
+        <div class="card shadow">
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="minutesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Fetch minutes data and render chart
+    fetch('/api/minutes')
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('minutesChart').getContext('2d');
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Total Minutes Played',
+                        data: data.data,
+                        backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 2,
+                        borderRadius: 4,
+                        padding: 10
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        title: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Minutes'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Player'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Render data labels on bars
+            const plugin = {
+                afterDatasetsDraw(chart) {
+                    chart.data.datasets.forEach((dataset, i) => {
+                        const meta = chart.getDatasetMeta(i);
+                        meta.data.forEach((datapoint, index) => {
+                            const value = dataset.data[index];
+                            const x = datapoint.x + 10;
+                            const y = datapoint.y;
+                            const ctx = chart.ctx;
+                            ctx.fillStyle = '#000';
+                            ctx.font = 'bold 12px Arial';
+                            ctx.textAlign = 'left';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(value, x, y);
+                        });
+                    });
+                }
+            };
+            chart.plugins.register(plugin);
+        })
+        .catch(error => console.error('Error fetching minutes data:', error));
+</script>
+{% endblock %}
