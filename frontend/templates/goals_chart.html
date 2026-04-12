@@ -6,6 +6,7 @@
         <h1 class="mb-4">
             <i class="fas fa-futbol text-success"></i> Total Goals Scored by Player
         </h1>
+        <p class="text-muted mb-4">Aggregated goals scored across all games in the season. Shows offensive contribution and goal-scoring impact for each player.</p>
         <div class="card shadow">
             <div class="card-body">
                 <div class="chart-container">
@@ -37,7 +38,7 @@
                     const barHeight = datapoint.height || 20;
                     
                     // Set font properties
-                    ctx.font = 'bold 13px Arial';
+                    ctx.font = '13px Arial';
                     const textWidth = ctx.measureText(value).width;
                     const padding = 8;
                     
@@ -50,7 +51,7 @@
                         ctx.fillText(value, x + padding, y);
                     } else {
                         // Text doesn't fit - draw inside bar
-                        ctx.fillStyle = '#fff';
+                        ctx.fillStyle = '#000';
                         ctx.textAlign = 'right';
                         ctx.textBaseline = 'middle';
                         ctx.fillText(value, x - padding, y);
@@ -79,7 +80,9 @@
                         borderColor: 'rgba(75, 192, 75, 1)',
                         borderWidth: 2,
                         borderRadius: 4,
-                        padding: 10
+                        padding: 10,
+                        barPercentage: 0.6,
+                        categoryPercentage: 0.7
                     }]
                 },
                 options: {
