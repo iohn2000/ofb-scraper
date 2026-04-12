@@ -19,6 +19,50 @@
 
 {% block scripts %}
 <script>
+    // Custom plugin to render data labels on bars
+    const dataLabelsPlugin = {
+        id: 'dataLabels',
+        afterDatasetsDraw(chart) {
+            const {ctx, data, chartArea: {left, top, width, height, right}} = chart;
+            
+            chart.data.datasets.forEach((dataset, datasetIndex) => {
+                const meta = chart.getDatasetMeta(datasetIndex);
+                
+                meta.data.forEach((datapoint, index) => {
+                    const value = dataset.data[index];
+                    
+                    if (value === null || value === undefined) return;
+                    
+                    const {x, y} = datapoint.getProps(['x', 'y']);
+                    const barHeight = datapoint.height || 20;
+                    
+                    // Set font properties
+                    ctx.font = 'bold 13px Arial';
+                    const textWidth = ctx.measureText(value).width;
+                    const padding = 8;
+                    
+                    // Check if text fits outside bar to the right
+                    if (x + padding + textWidth < right - 5) {
+                        // Text fits outside - draw to the right of bar
+                        ctx.fillStyle = '#000';
+                        ctx.textAlign = 'left';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(value, x + padding, y);
+                    } else {
+                        // Text doesn't fit - draw inside bar
+                        ctx.fillStyle = '#fff';
+                        ctx.textAlign = 'right';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(value, x - padding, y);
+                    }
+                });
+            });
+        }
+    };
+
+    // Register plugin globally
+    Chart.register(dataLabelsPlugin);
+
     // Fetch goals data and render chart
     fetch('/api/goals')
         .then(response => response.json())
@@ -68,27 +112,6 @@
                     }
                 }
             });
-
-            // Render data labels on bars
-            const plugin = {
-                afterDatasetsDraw(chart) {
-                    chart.data.datasets.forEach((dataset, i) => {
-                        const meta = chart.getDatasetMeta(i);
-                        meta.data.forEach((datapoint, index) => {
-                            const value = dataset.data[index];
-                            const x = datapoint.x + 10;
-                            const y = datapoint.y;
-                            const ctx = chart.ctx;
-                            ctx.fillStyle = '#000';
-                            ctx.font = 'bold 12px Arial';
-                            ctx.textAlign = 'left';
-                            ctx.textBaseline = 'middle';
-                            ctx.fillText(value, x, y);
-                        });
-                    });
-                }
-            };
-            chart.plugins.register(plugin);
         })
         .catch(error => console.error('Error fetching goals data:', error));
 </script>
