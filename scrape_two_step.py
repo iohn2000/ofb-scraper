@@ -654,7 +654,7 @@ if __name__ == "__main__":
         { "name": "Alen Bradaric",         "id": 1541676, "team": "U13", "year": 2026},
         { "name": "Burak Candan",          "id": 1492869, "team": "U13", "year": 2026},
         { "name": "Oskar Doerflinger",     "id": 1397635, "team": "U13", "year": 2026},        
-        #{ "name": "Osman-Demir",           "id": 1452690, "team": "U13", "year": 2026},
+        { "name": "Osman-Demir",           "id": 1452690, "team": "U13", "year": 2026},
         { "name": "Emmanuel-Edosomwan",    "id": 1290321, "team": "U13", "year": 2026},
         { "name": "Burak-Erdal",           "id": 1517009, "team": "U13", "year": 2026},
         { "name": "Oguzhan-Erkoc",         "id": 1208103, "team": "U13", "year": 2026},

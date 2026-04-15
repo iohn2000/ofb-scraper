@@ -91,6 +91,7 @@ def get_player_efficiency(db_path='ofb_stats.db'):
                 games g
                 JOIN players p ON g.player_id = p.player_id
             WHERE 
+                g.game_date BETWEEN '2025-08-29' and '2026-06-08' and      
                 g.goals > 0
                 OR g.minutes_played > 0
             GROUP BY 
@@ -148,6 +149,7 @@ def get_goal_efficiency_per_game(db_path='ofb_stats.db'):
                 games g
                 JOIN players p ON g.player_id = p.player_id
             WHERE 
+                g.game_date BETWEEN '2025-08-29' and '2026-06-08' and      
                 g.goals > 0
                 AND g.minutes_played > 0
             ORDER BY 
