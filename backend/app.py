@@ -6,7 +6,7 @@ from pathlib import Path
 # Add backend to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from utils.queries import get_player_minutes, get_player_goals, get_player_efficiency, get_goal_efficiency_per_game
+from utils.queries import get_games_played_per_player, get_player_minutes, get_player_goals, get_player_efficiency, get_goal_efficiency_per_game
 
 app = Flask(__name__, 
             template_folder='../frontend/templates',
@@ -70,6 +70,11 @@ def api_goal_efficiency():
     data = get_goal_efficiency_per_game(DB_PATH)
     return jsonify(data)
 
+@app.route('/api/games-played')
+def api_games_played():
+    """API endpoint for games played per player"""
+    data = get_games_played_per_player(DB_PATH)
+    return jsonify(data)
 
 if __name__ == '__main__':
     # Enable debug mode with auto-reload for development

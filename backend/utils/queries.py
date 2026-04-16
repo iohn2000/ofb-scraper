@@ -92,8 +92,7 @@ def get_player_efficiency(db_path='ofb_stats.db'):
                 JOIN players p ON g.player_id = p.player_id
             WHERE 
                 g.game_date BETWEEN '2025-08-29' and '2026-06-08' and      
-                g.goals > 0
-                OR g.minutes_played > 0
+                (g.goals > 0 OR g.minutes_played > 0)
             GROUP BY 
                 p.player_id, p.player_name
             HAVING 
@@ -178,4 +177,39 @@ def get_goal_efficiency_per_game(db_path='ofb_stats.db'):
         return games
     except Exception as e:
         print(f"Error fetching goal efficiency per game data: {e}")
+        return []
+
+def get_games_played_per_player(db_path='ofb_stats.db'):
+    """
+    Get the number of games played per player grouped by age group
+    """
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute('''
+        SELECT p.player_name, COUNT(*) AS num_games
+        FROM 
+        players p
+        JOIN 
+        games g ON p.player_id = g.player_id
+        WHERE 
+        g.game_date BETWEEN '2025-08-29' and '2026-06-08' 
+        and g.minutes_played > 0   
+        GROUP BY 
+        p.player_id, p.player_name
+
+        ORDER BY 
+        num_games desc
+        ''')
+        results = cursor.fetchall()
+        conn.close()
+        players = []
+        for row in results:
+            players.append({
+                'player_name': row[0],
+                'num_games': row[1]
+            })
+        return players
+    except Exception as e:
+        print(f"Error fetching games played per player data: {e}")
         return []
