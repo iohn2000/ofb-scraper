@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-chart-bar text-warning"></i> Player Efficiency Statistics
+        </h1>
+        <p class="text-muted mb-4">Aggregated statistics per player. Goals/90min shows scoring rate per 90 minutes played (standardized metric). Min/Goal shows minutes required per goal scored.</p>
+        <div class="card shadow">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover" id="efficiencyTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Player</th>
+                                <th class="text-center">Games</th>
+                                <th class="text-center">Goals</th>
+                                <th class="text-center">Minutes</th>
+                                <th class="text-center">Goals/90min</th>
+                                <th class="text-center">Min/Goal</th>
+                                <th class="text-center">Goals/Game</th>
+                            </tr>
+                        </thead>
+                        <tbody id="efficiencyTableBody">
+                            <tr>
+                                <td colspan="7" class="text-center text-muted">
+                                    <div class="spinner-border spinner-border-sm" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    Loading data...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Fetch efficiency data and populate table
+    fetch('/api/efficiency')
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('efficiencyTableBody');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No data available</td></tr>';
+                return;
+            }
+
+            data.forEach(player => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${player.player_name}</strong></td>
+                    <td class="text-center">${player.total_games}</td>
+                    <td class="text-center"><span class="badge bg-success">${player.total_goals}</span></td>
+                    <td class="text-center">${player.total_minutes}</td>
+                    <td class="text-center"><span class="badge bg-primary">${player.goals_per_90_minutes}</span></td>
+                    <td class="text-center">${player.minutes_per_goal}</td>
+                    <td class="text-center">${player.goals_per_game}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching efficiency data:', error);
+            const tbody = document.getElementById('efficiencyTableBody');
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Error loading data</td></tr>';
+        });
+</script>
+{% endblock %}

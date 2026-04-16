@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .chart-container {
+        width: 1500px;
+        height: 800px;
+    }
+</style>
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-clock text-primary"></i> Total Minutes Played by Player
+        </h1>
+        <p class="text-muted mb-4">Aggregated minutes played across all games in the season. Shows playing time distribution and overall involvement in team matches.</p>
+        <div class="card shadow">
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="minutesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Custom plugin to render data labels on bars
+    const dataLabelsPlugin = {
+        id: 'dataLabels',
+        afterDatasetsDraw(chart) {
+            const {ctx, data, chartArea: {left, top, width, height, right}} = chart;
+            
+ // Adjust font size based on screen width
+        const getFontSize = () => {
+            if (window.innerWidth <= 300) return '8px';
+            if (window.innerWidth <= 1500) return '10px';
+            return '16px'; // Default font size for larger screens
+        };
+
+            chart.data.datasets.forEach((dataset, datasetIndex) => {
+                const meta = chart.getDatasetMeta(datasetIndex);
+                
+                meta.data.forEach((datapoint, index) => {
+                    const value = dataset.data[index];
+                    
+                    if (value === null || value === undefined) return;
+                    
+                    const {x, y} = datapoint.getProps(['x', 'y']);
+                    const barHeight = datapoint.height || 20;
+                    console.log(getFontSize() + ' for ' + window.innerWidth + 'px screen width');
+                    // Set font properties
+                    // ctx.font = '11px Arial';
+                    ctx.font = `${getFontSize()} Arial`;
+                    const textWidth = ctx.measureText(value).width;
+                    const padding = 8;
+                    
+                    // Check if text fits outside bar to the right
+                    if (x + padding + textWidth < right - 5) {
+                        // Text fits outside - draw to the right of bar
+                        ctx.fillStyle = '#000';
+                        ctx.textAlign = 'left';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(value, x + padding, y);
+                    } else {
+                        // Text doesn't fit - draw inside bar
+                        ctx.fillStyle = '#000';
+                        ctx.textAlign = 'right';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(value, x - padding, y);
+                    }
+                });
+            });
+        }
+    };
+
+    // Register plugin globally
+    Chart.register(dataLabelsPlugin);
+
+    // Fetch minutes data and render chart
+    fetch('/api/minutes')
+        .then(response => response.json())
+        .then(data => {
+            const canvas = document.getElementById('minutesChart');
+            canvas.width = 1500;
+            canvas.height = 800;
+            const ctx = canvas.getContext('2d');
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Total Minutes Played',
+                        data: data.data,
+                        backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 2,
+                        borderRadius: 4,
+                        padding: 10,
+                        barPercentage: 0.75,
+                        categoryPercentage: 0.8
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: false,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        title: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Minutes'
+                            }
+                        },
+                        y: 
+                                   {                         
+                            title: {
+                                display: true,
+                                text: 'Player'
+                            }
+                        }
+                    }
+                }
+            });
+        })
+        .catch(error => console.error('Error fetching minutes data:', error));
+</script>
+{% endblock %}

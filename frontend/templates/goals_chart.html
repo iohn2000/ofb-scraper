@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .chart-container {
+        width: 800px;
+        height: 600px;
+    }
+</style>
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-futbol text-success"></i> Total Goals Scored by Player
+        </h1>
+        <p class="text-muted mb-4">Aggregated goals scored across all games in the season. Shows offensive contribution and goal-scoring impact for each player.</p>
+        <div class="card shadow">
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="goalsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Custom plugin to render data labels on bars
+    const dataLabelsPlugin = {
+        id: 'dataLabels',
+        afterDatasetsDraw(chart) {
+            const {ctx, data, chartArea: {left, top, width, height, right}} = chart;
+            
+            chart.data.datasets.forEach((dataset, datasetIndex) => {
+                const meta = chart.getDatasetMeta(datasetIndex);
+                
+                meta.data.forEach((datapoint, index) => {
+                    const value = dataset.data[index];
+                    
+                    if (value === null || value === undefined) return;
+                    
+                    const {x, y} = datapoint.getProps(['x', 'y']);
+                    const barHeight = datapoint.height || 20;
+                    
+                    // Set font properties
+                    ctx.font = '13px Arial';
+                    const textWidth = ctx.measureText(value).width;
+                    const padding = 8;
+                    
+                    // Check if text fits outside bar to the right
+                    if (x + padding + textWidth < right - 5) {
+                        // Text fits outside - draw to the right of bar
+                        ctx.fillStyle = '#000';
+                        ctx.textAlign = 'left';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(value, x + padding, y);
+                    } else {
+                        // Text doesn't fit - draw inside bar
+                        ctx.fillStyle = '#000';
+                        ctx.textAlign = 'right';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(value, x - padding, y);
+                    }
+                });
+            });
+        }
+    };
+
+    // Register plugin globally
+    Chart.register(dataLabelsPlugin);
+
+    // Fetch goals data and render chart
+    fetch('/api/goals')
+        .then(response => response.json())
+        .then(data => {
+            const canvas = document.getElementById('goalsChart');
+            canvas.width = 800;
+            canvas.height = 600;
+            const ctx = canvas.getContext('2d');
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Total Goals Scored',
+                        data: data.data,
+                        backgroundColor: 'rgba(75, 192, 75, 0.8)',
+                        borderColor: 'rgba(75, 192, 75, 1)',
+                        borderWidth: 2,
+                        borderRadius: 4,
+                        padding: 10,
+                        barPercentage: 0.6,
+                        categoryPercentage: 0.7
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: false,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        title: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Goals'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Player'
+                            }
+                        }
+                    }
+                }
+            });
+        })
+        .catch(error => console.error('Error fetching goals data:', error));
+</script>
+{% endblock %}
