@@ -2,6 +2,8 @@
 - scrape_two_step.py is the main file
 - test_charts.py regenerates charts from db
 
+- Individuelle Entwicklung statt Vergleich: Die Statistiken sollten zeigen, wie sich ein Kind im Vergleich zu sich selbst (frühere Spiele) verbessert hat, nicht im Vergleich zu anderen.
+
 chart generation is also in scrape_two_step.py
 
 -fix sqlite db
