@@ -42,7 +42,15 @@ def goal_efficiency():
     """Goal efficiency per game page"""
     return render_template('goal_efficiency.html')
 
+@app.route('/games-played')
+def games_played():
+    """Games played per player page"""
+    return render_template('games_played.html')
 
+
+#
+# api endpoints for charts and stats
+#
 @app.route('/api/minutes')
 def api_minutes():
     """API endpoint for player minutes data"""
