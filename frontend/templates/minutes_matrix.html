@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-table text-success"></i> Minutes Played Matrix
+        </h1>
+        <p class="text-muted mb-4">Minutes played by each player in each game. Columns are games (by date), rows are players (by name).</p>
+        <div class="card shadow">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle" id="minutesMatrixTable">
+                        <thead class="table-dark">
+                            <tr id="minutesMatrixHeader">
+                                <th>Player Name</th>
+                                <!-- Game columns will be inserted here -->
+                            </tr>
+                        </thead>
+                        <tbody id="minutesMatrixBody">
+                            <tr>
+                                <td colspan="100" class="text-center text-muted">
+                                    <div class="spinner-border spinner-border-sm" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    Loading data...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Fetch minutes matrix data and populate table
+fetch('/api/minutes-matrix')
+    .then(response => response.json())
+    .then(data => {
+        // data.games: [{id, date, opponent, ...}], ordered by date
+        // data.players: [{id, name}], ordered by name
+        // data.matrix: { player_id: { game_id: minutes, ... }, ... }
+        const games = data.games;
+        const players = data.players;
+        const matrix = data.matrix;
+
+        // Build table header
+        const headerRow = document.getElementById('minutesMatrixHeader');
+        // Remove all but first cell
+        while (headerRow.children.length > 1) headerRow.removeChild(headerRow.lastChild);
+        games.forEach(game => {
+            const th = document.createElement('th');
+            th.className = 'text-center';
+            th.style.minWidth = '140px';
+            th.style.whiteSpace = 'nowrap';
+            // Remove 'ostbahn' from header, only show the other team
+            let opponent = '';
+            if (game.home_team && game.home_team.toLowerCase().includes('ostbahn')) {
+                opponent = game.away_team;
+            } else if (game.away_team && game.away_team.toLowerCase().includes('ostbahn')) {
+                opponent = game.home_team;
+            } else {
+                opponent = game.home_team ? game.home_team : game.away_team;
+            }
+            // Remove time from date if present (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)
+            let dateOnly = game.date ? game.date.split(' ')[0] : '';
+            th.title = `${opponent} - ${dateOnly}`;
+            // Add result as third line, color green if ostbahn won, red if lost
+            let result = game.result || '';
+            let resultHtml = '';
+            if (result) {
+                // Remove bracketed result (e.g. "3:1 (1:0)" -> "3:1")
+                let mainResult = result.split('(')[0].trim();
+                // Parse mainResult: e.g. "3:1" or "1:2"
+                let parts = mainResult.split(':');
+                if (parts.length === 2) {
+                    let home = parseInt(parts[0], 10);
+                    let away = parseInt(parts[1], 10);
+                    let ostbahnIsHome = game.home_team && game.home_team.toLowerCase().includes('ostbahn');
+                    let ostbahnIsAway = game.away_team && game.away_team.toLowerCase().includes('ostbahn');
+                    let win = (ostbahnIsHome && home > away) || (ostbahnIsAway && away > home);
+                    let loss = (ostbahnIsHome && home < away) || (ostbahnIsAway && away < home);
+                    let color = win ? 'green' : (loss ? 'red' : '');
+                    resultHtml = `<br><span style='font-size:0.95em; color:${color}'>${result}</span>`;
+                } else {
+                    resultHtml = `<br><span style='font-size:0.95em;'>${result}</span>`;
+                }
+            }
+            th.innerHTML = `${opponent}<br><span style='font-size:0.95em;'>${dateOnly}</span>${resultHtml}`;
+            headerRow.appendChild(th);
+        });
+
+        // Build table body
+        const tbody = document.getElementById('minutesMatrixBody');
+        tbody.innerHTML = '';
+        players.forEach(player => {
+            const row = document.createElement('tr');
+            const nameCell = document.createElement('td');
+            nameCell.innerText = player.name;
+            row.appendChild(nameCell);
+            games.forEach(game => {
+                const cell = document.createElement('td');
+                cell.className = 'text-center';
+                const minutes = (matrix[player.id] && matrix[player.id][game.id]) ? matrix[player.id][game.id] : 0;
+                cell.innerText = minutes;
+                if (minutes === 0) {
+                    cell.classList.add('text-muted');
+                }
+                row.appendChild(cell);
+            });
+            tbody.appendChild(row);
+        });
+    })
+    .catch(error => {
+        console.error('Error fetching minutes matrix:', error);
+        const tbody = document.getElementById('minutesMatrixBody');
+        tbody.innerHTML = '<tr><td colspan="100" class="text-center text-danger">Error loading data</td></tr>';
+    });
+</script>
+{% endblock %}

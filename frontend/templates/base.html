@@ -50,7 +50,12 @@
                         <a class="nav-link {% if request.endpoint == 'games_played' %}active{% endif %}" href="/games-played">
                             <i class="fas fa-trophy"></i> Games Played
                         </a>
-                    </li>                    
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'minutes_matrix' %}active{% endif %}" href="/minutes-matrix">
+                            <i class="fas fa-table"></i> Minutes Matrix
+                        </a>
+                    </li>
                 </ul>
             </div>
         </nav>

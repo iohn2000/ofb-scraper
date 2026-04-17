@@ -6,7 +6,7 @@ from pathlib import Path
 # Add backend to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from utils.queries import get_games_played_per_player, get_player_minutes, get_player_goals, get_player_efficiency, get_goal_efficiency_per_game
+from utils.queries import get_games_played_per_player, get_player_minutes, get_player_goals, get_player_efficiency, get_goal_efficiency_per_game, get_minutes_matrix
 
 app = Flask(__name__, 
             template_folder='../frontend/templates',
@@ -49,6 +49,14 @@ def games_played():
 
 
 #
+# Page for minutes matrix
+#
+@app.route('/minutes-matrix')
+def minutes_matrix():
+    """Minutes matrix page"""
+    return render_template('minutes_matrix.html')
+
+#
 # api endpoints for charts and stats
 #
 @app.route('/api/minutes')
@@ -82,6 +90,12 @@ def api_goal_efficiency():
 def api_games_played():
     """API endpoint for games played per player"""
     data = get_games_played_per_player(DB_PATH)
+    return jsonify(data)
+
+@app.route('/api/minutes-matrix')
+def api_minutes_matrix():
+    """API endpoint for minutes matrix (players x games)"""
+    data = get_minutes_matrix(DB_PATH)
     return jsonify(data)
 
 if __name__ == '__main__':

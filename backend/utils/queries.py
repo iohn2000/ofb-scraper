@@ -124,6 +124,88 @@ def get_player_efficiency(db_path='ofb_stats.db'):
         return []
 
 
+def get_minutes_matrix(db_path='ofb_stats.db'):
+    """
+    Returns a matrix of all games (x-axis, ordered by date) and all players (y-axis, ordered by name),
+    with each cell showing the minutes played by that player in that game (0 if not played).
+    Output: {
+        'games': [ { 'game_id': ..., 'game_date': ..., ... }, ... ],
+        'players': [ 'Player A', 'Player B', ... ],
+        'matrix': [ [minA1, minA2, ...], [minB1, minB2, ...], ... ]
+    }
+    """
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Get all unique games ordered by date (group by home_team, away_team, game_date)
+        cursor.execute('''
+            SELECT MIN(id) as id, game_date, competition, home_team, away_team
+            FROM games
+            WHERE game_date BETWEEN '2025-08-29' and '2026-06-08'
+            GROUP BY game_date, competition, home_team, away_team
+            ORDER BY game_date ASC, id ASC
+        ''')
+        games = cursor.fetchall()
+        game_ids = [row[0] for row in games]
+        game_objs = [
+            {
+                'id': row[0],
+                'date': row[1],
+                'competition': row[2],
+                'home_team': row[3],
+                'away_team': row[4]
+            } for row in games
+        ]
+
+        # Get all players ordered by name
+        cursor.execute('''
+            SELECT player_id, player_name FROM players ORDER BY player_name ASC
+        ''')
+        players = cursor.fetchall()
+        player_ids = [row[0] for row in players]
+        player_names = [row[1] for row in players]
+
+        # Build matrix: {player_id: {game_id: minutes}}
+        matrix = {}
+        for pid in player_ids:
+            matrix[pid] = {}
+            for game in games:
+                gid = game[0]
+                game_date = game[1]
+                competition = game[2]
+                home_team = game[3]
+                away_team = game[4]
+                cursor.execute('''
+                    SELECT SUM(minutes_played) FROM games WHERE player_id=? AND game_date=? AND competition=? AND home_team=? AND away_team=?
+                ''', (pid, game_date, competition, home_team, away_team))
+                res = cursor.fetchone()
+                matrix[pid][gid] = res[0] if res and res[0] is not None else 0
+
+        # Prepare players and games as objects with id and name/date
+        players_obj = [{'id': row[0], 'name': row[1]} for row in players]
+        # Add result to games_obj
+        games_obj = []
+        for row in games:
+            gid, date, competition, home_team, away_team = row
+            # Find the most common result for this game (across all players)
+            cursor.execute('''
+                SELECT result, COUNT(*) as cnt FROM games WHERE game_date=? AND competition=? AND home_team=? AND away_team=? GROUP BY result ORDER BY cnt DESC LIMIT 1
+            ''', (date, competition, home_team, away_team))
+            res_row = cursor.fetchone()
+            result = res_row[0] if res_row and res_row[0] is not None else ''
+            games_obj.append({'id': gid, 'date': date, 'competition': competition, 'home_team': home_team, 'away_team': away_team, 'result': result})
+
+        conn.close()
+        return {
+            'games': games_obj,
+            'players': players_obj,
+            'matrix': matrix
+        }
+    except Exception as e:
+        print(f"Error fetching minutes matrix: {e}")
+        return {'games': [], 'players': [], 'matrix': []}
+
 def get_goal_efficiency_per_game(db_path='ofb_stats.db'):
     """
     Get goal efficiency per individual game (goals/90min, min/goal, etc.)
