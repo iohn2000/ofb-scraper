@@ -1,12 +1,15 @@
 # howto
+
+- scrape_player_ids.py gets players name and id for next step `scrapt_two_step.py`
 - scrape_two_step.py is the main file
-- test_charts.py regenerates charts from db
+
+# Ideas
 
 - Individuelle Entwicklung statt Vergleich: Die Statistiken sollten zeigen, wie sich ein Kind im Vergleich zu sich selbst (frühere Spiele) verbessert hat, nicht im Vergleich zu anderen.
 
-chart generation is also in scrape_two_step.py
+- chart generation is also in scrape_two_step.py
 
--fix sqlite db
+# fix sqlite db
 
 
 Repair path (works in ~90% of cases)
