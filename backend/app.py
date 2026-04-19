@@ -62,7 +62,7 @@ def minutes_matrix():
 @app.route('/api/minutes')
 def api_minutes():
     """API endpoint for player minutes data"""
-    data = get_player_minutes(DB_PATH)
+    data = get_player_minutes(DB_PATH, team="U13")
     return jsonify(data)
 
 

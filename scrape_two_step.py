@@ -307,7 +307,7 @@ def generate_goals_chart(db_path='ofb_stats.db', output_file='player_goals.png',
     return output_file
 
 
-def scrape_from_page(player_id, team="U13", year=2026):
+def scrape_from_page(player_id, team, year=2026):
     """
     Visit the player page with Firefox and extract data directly from the loaded page
     """
@@ -402,14 +402,7 @@ def scrape_from_page(player_id, team="U13", year=2026):
         htmlResult = driver.execute_script("return document.getElementsByTagName('html')[0].innerHTML")
         page_source = htmlResult #driver.page_source
         
-        # Save page source for debugging
-        try:
-            with open('debug_rendered.html', 'w', encoding='utf-8') as f:
-                f.write(page_source)
-            print("✓ Saved page HTML to debug_rendered.html")
-        except:
-            pass
-        
+       
         driver.quit()
         
         # Parse the rendered HTML to extract game data
@@ -491,14 +484,8 @@ def scrape_from_page(player_id, team="U13", year=2026):
             for game in games_data:
                 datum_str = game.get('datum', '')
                 bewerb = game.get('bewerb', '')
-                
-                # Extract age group (U13, U14, U12, etc.) from competition name
-                age_match = re.search(r'U\d+', bewerb.upper())
-                if age_match:
-                    game['ageGroup'] = age_match.group(0)
-                else:
-                    game['ageGroup'] = ''
-                
+                game['ageGroup'] = team
+
                 # Parse date from format: "DD.MM.YYYY, HH:MM Uhr" to timestamp
                 # Example: "15.11.2025, 11:30 Uhr"
                 if datum_str and '.' in datum_str:
@@ -568,7 +555,7 @@ def fetch_json_data(player_id, team="U13", year=2026):
         return None
 
 
-def scrape_player_stats(player_id, team="U13", year=2026, skip_trigger=False):
+def scrape_player_stats(player_id, team, year=2026, skip_trigger=False):
     """
     Complete scraping process:
     Extract data from rendered HTML in the browser
@@ -608,7 +595,7 @@ def save_player_stats_to_db(player_id, player_name, team, year, data, db_path='o
     return new_games, updated_games
 
 
-def print_player_stats(player_id, player_name, team="U13", year=2026, skip_trigger=False):
+def print_player_stats(player_id, player_name, team, year=2026, skip_trigger=False):
     """
     Fetch and display player statistics to console
     """
@@ -652,171 +639,207 @@ if __name__ == "__main__":
     # Player data from your file
     players = [
     {
-        "name": "Ibrahim Alfayad",
-        "id": 1564144,
-        "team": "U14",
+        "name": "Kayra Akca",
+        "id": 1416519,
+        "team": "U13",
         "year": 2026
     },
     {
-        "name": "Alexandro Alge",
-        "id": 1264452,
-        "team": "U14",
-        "year": 2026
-    },
-    {
-        "name": "Rayan Alkhalaf",
-        "id": 1366175,
-        "team": "U14",
+        "name": "Musab Aslan",
+        "id": 1501804,
+        "team": "U13",
         "year": 2026
     },
     {
         "name": "Ledian Avdyli",
         "id": 1397521,
-        "team": "U14",
+        "team": "U13",
+        "year": 2026
+    },
+    {
+        "name": "James Bogner",
+        "id": 1526240,
+        "team": "U13",
+        "year": 2026
+    },
+    {
+        "name": "Alen Bradaric",
+        "id": 1541676,
+        "team": "U13",
+        "year": 2026
+    },
+    {
+        "name": "Burak Candan",
+        "id": 1492869,
+        "team": "U13",
         "year": 2026
     },
     {
         "name": "Oskar Dörflinger",
         "id": 1397635,
-        "team": "U14",
+        "team": "U13",
         "year": 2026
     },
     {
         "name": "Emmanuel Edosomwan",
         "id": 1290321,
-        "team": "U14",
+        "team": "U13",
+        "year": 2026
+    },
+    {
+        "name": "Burak Erdal",
+        "id": 1517009,
+        "team": "U13",
         "year": 2026
     },
     {
         "name": "Oguzhan Erkoc",
         "id": 1208103,
-        "team": "U14",
+        "team": "U13",
         "year": 2026
     },
     {
-        "name": "Ismail Görgülü",
-        "id": 1293561,
-        "team": "U14",
+        "name": "Fabritio Facalet",
+        "id": 1323567,
+        "team": "U13",
         "year": 2026
     },
     {
-        "name": "Ayaz Hatunoglu",
-        "id": 1401464,
-        "team": "U14",
+        "name": "Liam Fleck",
+        "id": 1454580,
+        "team": "U13",
+        "year": 2026
+    },
+    {
+        "name": "Ashab Gemici",
+        "id": 1217525,
+        "team": "U13",
+        "year": 2026
+    },
+    {
+        "name": "Florian Halimi",
+        "id": 1561892,
+        "team": "U13",
         "year": 2026
     },
     {
         "name": "Berat Cetin Hatunoglu",
         "id": 1360273,
-        "team": "U14",
+        "team": "U13",
         "year": 2026
     },
     {
-        "name": "Enrique Hernandez Cutino",
-        "id": 1359773,
-        "team": "U14",
+        "name": "Ismet Inan",
+        "id": 1366003,
+        "team": "U13",
         "year": 2026
     },
     {
-        "name": "Said Amirkhan Hosseini",
-        "id": 1508831,
-        "team": "U14",
+        "name": "Adrian Jarzmik",
+        "id": 1542533,
+        "team": "U13",
         "year": 2026
     },
     {
-        "name": "Michael Ifejika",
-        "id": 1429814,
-        "team": "U14",
+        "name": "Sandi Jusic",
+        "id": 1351306,
+        "team": "U13",
         "year": 2026
     },
     {
-        "name": "Lavend Issa",
-        "id": 1546507,
-        "team": "U14",
+        "name": "Emir Kaya",
+        "id": 1418190,
+        "team": "U13",
         "year": 2026
     },
     {
-        "name": "Koray Kara",
-        "id": 1535768,
-        "team": "U14",
+        "name": "Halil Keskin",
+        "id": 1302985,
+        "team": "U13",
         "year": 2026
     },
     {
-        "name": "Steven Kendy",
-        "id": 1401114,
-        "team": "U14",
-        "year": 2026
-    },
-    {
-        "name": "Wiktor Kownacki",
-        "id": 1541099,
-        "team": "U14",
+        "name": "Mert Köse",
+        "id": 1350034,
+        "team": "U13",
         "year": 2026
     },
     {
         "name": "Valerio Moloney",
         "id": 1447767,
-        "team": "U14",
+        "team": "U13",
         "year": 2026
     },
     {
-        "name": "Beytullah Muratdag",
-        "id": 1225768,
-        "team": "U14",
+        "name": "Mihael Mrkovski",
+        "id": 1321483,
+        "team": "U13",
         "year": 2026
     },
     {
-        "name": "Mohammad Rasta",
-        "id": 1475467,
-        "team": "U14",
+        "name": "Dominik Müllner",
+        "id": 1240755,
+        "team": "U13",
         "year": 2026
     },
     {
-        "name": "Mehmet Seker",
-        "id": 1401585,
-        "team": "U14",
+        "name": "Asaf Ordulu",
+        "id": 1416861,
+        "team": "U13",
         "year": 2026
     },
     {
-        "name": "Sebastian Simunek",
-        "id": 1252352,
-        "team": "U14",
+        "name": "Anthony Rodriguez",
+        "id": 1370839,
+        "team": "U13",
+        "year": 2026
+    },
+    {
+        "name": "Daniel Strugari",
+        "id": 1453500,
+        "team": "U13",
+        "year": 2026
+    },
+    {
+        "name": "Emir Temel",
+        "id": 1424637,
+        "team": "U13",
         "year": 2026
     },
     {
         "name": "Talha Temiz",
         "id": 1449355,
-        "team": "U14",
+        "team": "U13",
         "year": 2026
     },
     {
-        "name": "Joel Timothy",
-        "id": 1451343,
-        "team": "U14",
+        "name": "Cihangir Tosun",
+        "id": 1286934,
+        "team": "U13",
         "year": 2026
     },
     {
-        "name": "Tayler Tütüncü",
-        "id": 1350027,
-        "team": "U14",
+        "name": "Timucin Türk",
+        "id": 1405655,
+        "team": "U13",
         "year": 2026
     },
     {
-        "name": "Aytunc Ucar",
-        "id": 1396833,
-        "team": "U14",
-        "year": 2026
-    },
-    {
-        "name": "Kevin Wang",
-        "id": 1499463,
-        "team": "U14",
+        "name": "Alex Watycha",
+        "id": 1372719,
+        "team": "U13",
         "year": 2026
     },
     {
         "name": "Emir Ögmen",
         "id": 1245535,
-        "team": "U14",
+        "team": "U13",
+        "year": 2026
+    },
+    {
+        "name": "Seyithan Öztürk",
+        "id": 1550199,
+        "team": "U13",
         "year": 2026
     }
 ]

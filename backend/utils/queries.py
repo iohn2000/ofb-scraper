@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime
 
-def get_player_minutes(db_path='ofb_stats.db', team="U13", season_year="2026"):
+def get_player_minutes(db_path='ofb_stats.db', team="U13"):
     """
     Get total minutes played per player
     """
@@ -17,7 +17,7 @@ def get_player_minutes(db_path='ofb_stats.db', team="U13", season_year="2026"):
             LEFT JOIN games g ON p.player_id = g.player_id
             WHERE 
                 g.game_date BETWEEN '2025-08-29' and '2026-06-08'
-                AND (g.age_group = ? OR g.age_group = '')
+                AND g.age_group = ?
             GROUP BY p.player_id, p.player_name
             ORDER BY total_minutes DESC
         ''', (team,))
@@ -36,7 +36,6 @@ def get_player_minutes(db_path='ofb_stats.db', team="U13", season_year="2026"):
         print(f"Error fetching minutes data: {e}")
         return {'labels': [], 'data': []}
 
-
 def get_player_goals(db_path='ofb_stats.db', team="U13"):
     """
     Get total goals scored per player
@@ -53,7 +52,7 @@ def get_player_goals(db_path='ofb_stats.db', team="U13"):
             LEFT JOIN games g ON p.player_id = g.player_id
             WHERE 
                 g.game_date BETWEEN '2025-08-29' and '2026-06-08'
-                AND p.team = ?
+                AND g.age_group = ?
             GROUP BY p.player_id, p.player_name
             HAVING SUM(g.goals) > 0
             ORDER BY total_goals DESC
@@ -72,7 +71,6 @@ def get_player_goals(db_path='ofb_stats.db', team="U13"):
     except Exception as e:
         print(f"Error fetching goals data: {e}")
         return {'labels': [], 'data': []}
-
 
 def get_player_efficiency(db_path='ofb_stats.db', team="U13"):
     """
@@ -96,7 +94,7 @@ def get_player_efficiency(db_path='ofb_stats.db', team="U13"):
                 JOIN players p ON g.player_id = p.player_id
             WHERE 
                 g.game_date BETWEEN '2025-08-29' and '2026-06-08' and      
-                p.team = ? and
+                AND g.age_group = ? and
                 (g.goals > 0 OR g.minutes_played > 0)
             GROUP BY 
                 p.player_id, p.player_name
@@ -127,7 +125,6 @@ def get_player_efficiency(db_path='ofb_stats.db', team="U13"):
     except Exception as e:
         print(f"Error fetching efficiency data: {e}")
         return []
-
 
 def get_minutes_matrix(db_path='ofb_stats.db', team="U13"):
     """
