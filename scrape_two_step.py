@@ -35,11 +35,13 @@ def init_database(db_path='ofb_stats.db'):
     # Create players table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS players (
-            player_id INTEGER PRIMARY KEY,
-            player_name TEXT NOT NULL,
-            team TEXT,
-            season_year INTEGER,
-            last_updated TEXT DEFAULT CURRENT_TIMESTAMP
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_id    TEXT NOT NULL,
+            player_name  TEXT NOT NULL,
+            team         TEXT,
+            season_year  INTEGER,
+            last_updated TEXT DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(player_id, team, season_year)
         )
     ''')
     
@@ -81,13 +83,17 @@ def save_player_to_db(player_id, player_name, team, year, db_path='ofb_stats.db'
     """
     Save or update player information in the database
     """
+    
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
     cursor.execute('''
-        INSERT OR REPLACE INTO players (player_id, player_name, team, season_year, last_updated)
+        INSERT INTO players (player_id, player_name, team, season_year, last_updated)
         VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-    ''', (player_id, player_name, team, year))
+        ON CONFLICT(player_id, team, season_year) DO UPDATE SET
+            player_name  = excluded.player_name,
+            last_updated = CURRENT_TIMESTAMP
+    ''', (player_id, player_name, team, year))   
     
     conn.commit()
     conn.close()
@@ -632,217 +638,31 @@ def print_player_stats(player_id, player_name, team, year=2026, skip_trigger=Fal
 
 
 if __name__ == "__main__":
+   import argparse
+
+   parser = argparse.ArgumentParser(description='ÖFB Player Statistics Scraper')
+   parser.add_argument('players_file', help='Path to JSON file containing player list (e.g. players_u13.json)')
+   parser.add_argument('--db', default='ofb_stats.db', help='SQLite database path (default: ofb_stats.db)')
+   args = parser.parse_args()
+
+    # Load players from JSON file
+   try:
+    with open(args.players_file, 'r', encoding='utf-8') as f:
+      players = json.load(f)
+    print(f"✓ Loaded {len(players)} players from {args.players_file}")
+
+   except FileNotFoundError:
+    print(f"✗ File not found: {args.players_file}")
+    exit(1)
+
+   except json.JSONDecodeError as e:
+    print(f"✗ Invalid JSON in {args.players_file}: {e}")
+    exit(1)
+
     # Initialize database
     init_database('ofb_stats.db')
     print()
     
-    # Player data from your file
-    players = [
-    {
-        "name": "Kayra Akca",
-        "id": 1416519,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Musab Aslan",
-        "id": 1501804,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Ledian Avdyli",
-        "id": 1397521,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "James Bogner",
-        "id": 1526240,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Alen Bradaric",
-        "id": 1541676,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Burak Candan",
-        "id": 1492869,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Oskar Dörflinger",
-        "id": 1397635,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Emmanuel Edosomwan",
-        "id": 1290321,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Burak Erdal",
-        "id": 1517009,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Oguzhan Erkoc",
-        "id": 1208103,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Fabritio Facalet",
-        "id": 1323567,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Liam Fleck",
-        "id": 1454580,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Ashab Gemici",
-        "id": 1217525,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Florian Halimi",
-        "id": 1561892,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Berat Cetin Hatunoglu",
-        "id": 1360273,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Ismet Inan",
-        "id": 1366003,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Adrian Jarzmik",
-        "id": 1542533,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Sandi Jusic",
-        "id": 1351306,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Emir Kaya",
-        "id": 1418190,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Halil Keskin",
-        "id": 1302985,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Mert Köse",
-        "id": 1350034,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Valerio Moloney",
-        "id": 1447767,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Mihael Mrkovski",
-        "id": 1321483,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Dominik Müllner",
-        "id": 1240755,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Asaf Ordulu",
-        "id": 1416861,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Anthony Rodriguez",
-        "id": 1370839,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Daniel Strugari",
-        "id": 1453500,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Emir Temel",
-        "id": 1424637,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Talha Temiz",
-        "id": 1449355,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Cihangir Tosun",
-        "id": 1286934,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Timucin Türk",
-        "id": 1405655,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Alex Watycha",
-        "id": 1372719,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Emir Ögmen",
-        "id": 1245535,
-        "team": "U13",
-        "year": 2026
-    },
-    {
-        "name": "Seyithan Öztürk",
-        "id": 1550199,
-        "team": "U13",
-        "year": 2026
-    }
-]
     for player in players:
         # Print to console
         data = print_player_stats(player['id'], player['name'], player['team'], player['year'], False)
