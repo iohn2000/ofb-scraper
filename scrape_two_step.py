@@ -190,7 +190,7 @@ def save_games_to_db(player_id, games_data, db_path='ofb_stats.db'):
     return new_games, updated_games
 
 
-def generate_minutes_chart(db_path='ofb_stats.db', output_file='player_minutes.png'):
+def generate_minutes_chart(db_path='ofb_stats.db', output_file='player_minutes.png', team="U13"):
     """
     Generate a bar chart showing total minutes played for each player
     Saves the chart as a PNG file
@@ -200,15 +200,17 @@ def generate_minutes_chart(db_path='ofb_stats.db', output_file='player_minutes.p
     
     # Query to get total minutes per player
     cursor.execute('''
- SELECT 
+        SELECT 
             p.player_name,
             SUM(g.minutes_played) as total_minutes
         FROM players p
         LEFT JOIN games g ON p.player_id = g.player_id
-        where g.game_date BETWEEN '2025-08-29' and '2026-06-08'
+        WHERE 
+            g.game_date BETWEEN '2025-08-29' and '2026-06-08'
+            AND p.team = ?       
         GROUP BY p.player_id, p.player_name
         ORDER BY total_minutes DESC
-    ''')
+    ''', (team,))
     
     results = cursor.fetchall()
     conn.close()
@@ -234,7 +236,7 @@ def generate_minutes_chart(db_path='ofb_stats.db', output_file='player_minutes.p
     
     plt.ylabel('Player', fontsize=12, fontweight='bold')
     plt.xlabel('Total Minutes Played', fontsize=12, fontweight='bold')
-    plt.title('ÖFB U13 - Total Minutes Played by Player', fontsize=14, fontweight='bold', pad=20)
+    plt.title('ÖFB '' + team+ '' - Total Minutes Played by Player', fontsize=14, fontweight='bold', pad=20)
     plt.grid(axis='x', alpha=0.3, linestyle='--')
     plt.tight_layout()
     
@@ -246,7 +248,7 @@ def generate_minutes_chart(db_path='ofb_stats.db', output_file='player_minutes.p
     return output_file
 
 
-def generate_goals_chart(db_path='ofb_stats.db', output_file='player_goals.png'):
+def generate_goals_chart(db_path='ofb_stats.db', output_file='player_goals.png', team="U13"):
     """
     Generate a bar chart showing total goals scored for each player
     Saves the chart as a PNG file
@@ -261,11 +263,13 @@ def generate_goals_chart(db_path='ofb_stats.db', output_file='player_goals.png')
             SUM(g.goals) as total_goals
         FROM players p
         LEFT JOIN games g ON p.player_id = g.player_id
-        WHERE g.game_date BETWEEN '2025-08-29' and '2026-06-08'
+        WHERE 
+            g.game_date BETWEEN '2025-08-29' and '2026-06-08'
+            AND p.team = ?       
         GROUP BY p.player_id, p.player_name
         HAVING SUM(g.goals) > 0
         ORDER BY total_goals DESC
-    ''')
+    ''', (team,))
     
     results = cursor.fetchall()
     conn.close()
@@ -291,7 +295,7 @@ def generate_goals_chart(db_path='ofb_stats.db', output_file='player_goals.png')
     
     plt.ylabel('Player', fontsize=12, fontweight='bold')
     plt.xlabel('Total Goals Scored', fontsize=12, fontweight='bold')
-    plt.title('ÖFB U13 - Total Goals Scored by Player', fontsize=14, fontweight='bold', pad=20)
+    plt.title('ÖFB ''+ team + '' - Total Goals Scored by Player', fontsize=14, fontweight='bold', pad=20)
     plt.grid(axis='x', alpha=0.3, linestyle='--')
     plt.tight_layout()
     
@@ -647,42 +651,175 @@ if __name__ == "__main__":
     
     # Player data from your file
     players = [
-        { "name": "Kayra Akca",            "id": 1416519, "team": "U13", "year": 2026},
-        { "name": "Musab Aslan",           "id": 1501804, "team": "U13", "year": 2026},
-        { "name": "Ledian Avdyli",         "id": 1397521, "team": "U13", "year": 2026},        
-        { "name": "James Bogner",          "id": 1526240, "team": "U13", "year": 2026},
-        { "name": "Alen Bradaric",         "id": 1541676, "team": "U13", "year": 2026},
-        { "name": "Burak Candan",          "id": 1492869, "team": "U13", "year": 2026},
-        { "name": "Oskar Doerflinger",     "id": 1397635, "team": "U13", "year": 2026},        
-        { "name": "Osman-Demir",           "id": 1452690, "team": "U13", "year": 2026},
-        { "name": "Emmanuel-Edosomwan",    "id": 1290321, "team": "U13", "year": 2026},
-        { "name": "Burak-Erdal",           "id": 1517009, "team": "U13", "year": 2026},
-        { "name": "Oguzhan-Erkoc",         "id": 1208103, "team": "U13", "year": 2026},
-        { "name": "Fabricio Facalet",      "id": 1323567, "team": "U13", "year": 2026},
-        { "name": "Liam Fleck",            "id": 1454580, "team": "U13", "year": 2026},        
-        { "name": "Ashab Gemici",          "id": 1217525, "team": "U13", "year": 2026},
-        { "name": "Berat Cetin Hatunoglu", "id": 1360273, "team": "U13", "year": 2026},
-        { "name": "Ismet Inan",            "id": 1366003, "team": "U13", "year": 2026},
-        { "name": "Adrian Jarzmik",        "id": 1542533, "team": "U13", "year": 2026},
-        { "name": "Sandi Jusic",           "id": 1351306, "team": "U13", "year": 2026},
-        { "name": "Emir Kaya",             "id": 1418190, "team": "U13", "year": 2026},        
-        { "name": "Halil-Keskin",          "id": 1302985, "team": "U13", "year": 2026},
-        { "name": "Mert Koese",            "id": 1350034, "team": "U13", "year": 2026},
-        { "name": "Valerio Molony",        "id": 1447767, "team": "U13", "year": 2026},
-        { "name": "Mihael Mrkovski",       "id": 1321483, "team": "U13", "year": 2026},
-        { "name": "Dominik Muellner",      "id": 1240755, "team": "U13", "year": 2026},
-        { "name": "Asaf Ordulu",           "id": 1416861, "team": "U13", "year": 2026},
-        { "name": "Anthony Rodriguez",     "id": 1370839, "team": "U13", "year": 2026},
-        { "name": "Daniel Strugari",       "id": 1453500, "team": "U13", "year": 2026},
-        { "name": "Emir Temel",            "id": 1424637, "team": "U13", "year": 2026},        
-        { "name": "Talha Temiz",           "id": 1449355, "team": "U13", "year": 2026},
-        { "name": "Cihangir Tosun",        "id": 1286934, "team": "U13", "year": 2026},
-        { "name": "Timucin Türk",          "id": 1405655, "team": "U13", "year": 2026},
-        { "name": "Alex Watycha",          "id": 1372719, "team": "U13", "year": 2026},
-        { "name": "Emir Oegmen",           "id": 1245535, "team": "U13", "year": 2026},                                        
-        { "name": "Seyithan Öztürk",       "id": 1550199, "team": "U13", "year": 2026}
-    ]
-
+    {
+        "name": "Ibrahim Alfayad",
+        "id": 1564144,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Alexandro Alge",
+        "id": 1264452,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Rayan Alkhalaf",
+        "id": 1366175,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Ledian Avdyli",
+        "id": 1397521,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Oskar Dörflinger",
+        "id": 1397635,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Emmanuel Edosomwan",
+        "id": 1290321,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Oguzhan Erkoc",
+        "id": 1208103,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Ismail Görgülü",
+        "id": 1293561,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Ayaz Hatunoglu",
+        "id": 1401464,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Berat Cetin Hatunoglu",
+        "id": 1360273,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Enrique Hernandez Cutino",
+        "id": 1359773,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Said Amirkhan Hosseini",
+        "id": 1508831,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Michael Ifejika",
+        "id": 1429814,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Lavend Issa",
+        "id": 1546507,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Koray Kara",
+        "id": 1535768,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Steven Kendy",
+        "id": 1401114,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Wiktor Kownacki",
+        "id": 1541099,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Valerio Moloney",
+        "id": 1447767,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Beytullah Muratdag",
+        "id": 1225768,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Mohammad Rasta",
+        "id": 1475467,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Mehmet Seker",
+        "id": 1401585,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Sebastian Simunek",
+        "id": 1252352,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Talha Temiz",
+        "id": 1449355,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Joel Timothy",
+        "id": 1451343,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Tayler Tütüncü",
+        "id": 1350027,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Aytunc Ucar",
+        "id": 1396833,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Kevin Wang",
+        "id": 1499463,
+        "team": "U14",
+        "year": 2026
+    },
+    {
+        "name": "Emir Ögmen",
+        "id": 1245535,
+        "team": "U14",
+        "year": 2026
+    }
+]
     for player in players:
         # Print to console
         data = print_player_stats(player['id'], player['name'], player['team'], player['year'], False)
@@ -702,12 +839,12 @@ if __name__ == "__main__":
     
     # Generate visualizations
     print("\nGenerating player minutes chart...")
-    chart_file = generate_minutes_chart('ofb_stats.db', 'player_minutes.png')
+    chart_file = generate_minutes_chart('ofb_stats.db', 'player_minutes_' + players[0]['team'] + '.png',players[0]['team'])
     if chart_file:
         print(f"Minutes chart available at: {chart_file}")
     
     print("\nGenerating player goals chart...")
-    goals_chart = generate_goals_chart('ofb_stats.db', 'player_goals.png')
+    goals_chart = generate_goals_chart('ofb_stats.db', 'player_goals_' + players[0]['team'] + '.png',players[0]['team'])
     if goals_chart:
         print(f"Goals chart available at: {goals_chart}")
 

@@ -33,3 +33,9 @@ sqlite3 ofb_stats.db .dump > dump.sql
 sqlite3 fixed.db < dump.sql
 
 ⚠️ This may fail earlier than .recover, but still worth trying.
+
+# Kader
+https://vereine.oefb.at/ScOstbahnXi/Mannschaften/Saison-2025-26/U14/Kader/
+https://vereine.oefb.at/ScOstbahnXi/Mannschaften/Saison-2025-26/U15/Kader/
+https://vereine.oefb.at/ScOstbahnXi/Mannschaften/Saison-2025-26/U16/Kader/
+https://vereine.oefb.at/ScOstbahnXi/Mannschaften/Saison-2025-26/U18/Kader/

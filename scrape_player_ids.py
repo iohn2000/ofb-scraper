@@ -27,8 +27,10 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 
-ROSTER_URL = "https://vereine.oefb.at/ScOstbahnXi/Mannschaften/Saison-2025-26/U13-A/Kader/"
-TEAM = "U13"
+TEAM = "U13-A"
+TEAM = "U15"
+ROSTER_URL = "https://vereine.oefb.at/ScOstbahnXi/Mannschaften/Saison-2025-26/" + TEAM + "/Kader/"
+
 YEAR = 2026
 
 
@@ -152,7 +154,7 @@ def main():
         print(f'    {{ "name": "{p["name"]}", "id": {p["id"]}, "team": "{p["team"]}", "year": {p["year"]} }},')
     print("]")
 
-    with open("players_u13.json", "w", encoding="utf-8") as f:
+    with open("players_u18.json", "w", encoding="utf-8") as f:
         json.dump(players, f, ensure_ascii=False, indent=4)
     print("\nSaved to players_u13.json")
 

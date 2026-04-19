@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime
 
-def get_player_minutes(db_path='ofb_stats.db'):
+def get_player_minutes(db_path='ofb_stats.db', team="U13"):
     """
     Get total minutes played per player
     """
@@ -15,10 +15,12 @@ def get_player_minutes(db_path='ofb_stats.db'):
                 SUM(g.minutes_played) as total_minutes
             FROM players p
             LEFT JOIN games g ON p.player_id = g.player_id
-            WHERE g.game_date BETWEEN '2025-08-29' and '2026-06-08'
+            WHERE 
+                g.game_date BETWEEN '2025-08-29' and '2026-06-08'
+                AND p.team = ?
             GROUP BY p.player_id, p.player_name
             ORDER BY total_minutes DESC
-        ''')
+        ''', (team,))
         
         results = cursor.fetchall()
         conn.close()
@@ -35,7 +37,7 @@ def get_player_minutes(db_path='ofb_stats.db'):
         return {'labels': [], 'data': []}
 
 
-def get_player_goals(db_path='ofb_stats.db'):
+def get_player_goals(db_path='ofb_stats.db', team="U13"):
     """
     Get total goals scored per player
     """
@@ -49,11 +51,13 @@ def get_player_goals(db_path='ofb_stats.db'):
                 SUM(g.goals) as total_goals
             FROM players p
             LEFT JOIN games g ON p.player_id = g.player_id
-            WHERE g.game_date BETWEEN '2025-08-29' and '2026-06-08'
+            WHERE 
+                g.game_date BETWEEN '2025-08-29' and '2026-06-08'
+                AND p.team = ?
             GROUP BY p.player_id, p.player_name
             HAVING SUM(g.goals) > 0
             ORDER BY total_goals DESC
-        ''')
+        ''', (team,))
         
         results = cursor.fetchall()
         conn.close()
@@ -70,7 +74,7 @@ def get_player_goals(db_path='ofb_stats.db'):
         return {'labels': [], 'data': []}
 
 
-def get_player_efficiency(db_path='ofb_stats.db'):
+def get_player_efficiency(db_path='ofb_stats.db', team="U13"):
     """
     Get player efficiency stats (goals per 90 minutes, etc.) aggregated across all games
     """
@@ -92,6 +96,7 @@ def get_player_efficiency(db_path='ofb_stats.db'):
                 JOIN players p ON g.player_id = p.player_id
             WHERE 
                 g.game_date BETWEEN '2025-08-29' and '2026-06-08' and      
+                p.team = ? and
                 (g.goals > 0 OR g.minutes_played > 0)
             GROUP BY 
                 p.player_id, p.player_name
@@ -101,7 +106,7 @@ def get_player_efficiency(db_path='ofb_stats.db'):
             ORDER BY 
                 goals_per_90_minutes DESC,
                 minutes_per_goal ASC
-        ''')
+        ''', (team,))
         
         results = cursor.fetchall()
         conn.close()
@@ -124,7 +129,7 @@ def get_player_efficiency(db_path='ofb_stats.db'):
         return []
 
 
-def get_minutes_matrix(db_path='ofb_stats.db'):
+def get_minutes_matrix(db_path='ofb_stats.db', team="U13"):
     """
     Returns a matrix of all games (x-axis, ordered by date) and all players (y-axis, ordered by name),
     with each cell showing the minutes played by that player in that game (0 if not played).
@@ -160,8 +165,8 @@ def get_minutes_matrix(db_path='ofb_stats.db'):
 
         # Get all players ordered by name
         cursor.execute('''
-            SELECT player_id, player_name FROM players ORDER BY player_name ASC
-        ''')
+            SELECT player_id, player_name FROM players WHERE team = ? ORDER BY player_name ASC
+        ''', (team,))
         players = cursor.fetchall()
         player_ids = [row[0] for row in players]
         player_names = [row[1] for row in players]
@@ -206,7 +211,7 @@ def get_minutes_matrix(db_path='ofb_stats.db'):
         print(f"Error fetching minutes matrix: {e}")
         return {'games': [], 'players': [], 'matrix': []}
 
-def get_goal_efficiency_per_game(db_path='ofb_stats.db'):
+def get_goal_efficiency_per_game(db_path='ofb_stats.db', team="U13"):
     """
     Get goal efficiency per individual game (goals/90min, min/goal, etc.)
     Sorted by best efficiency first
@@ -233,11 +238,12 @@ def get_goal_efficiency_per_game(db_path='ofb_stats.db'):
                 g.game_date BETWEEN '2025-08-29' and '2026-06-08' and      
                 g.goals > 0
                 AND g.minutes_played > 0
+                AND p.team = ?
             ORDER BY 
                 goals_per_90_minutes DESC,
                 minutes_per_goal ASC,
                 g.game_date DESC
-        ''')
+        ''', (team,))
         
         results = cursor.fetchall()
         conn.close()
@@ -261,7 +267,7 @@ def get_goal_efficiency_per_game(db_path='ofb_stats.db'):
         print(f"Error fetching goal efficiency per game data: {e}")
         return []
 
-def get_games_played_per_player(db_path='ofb_stats.db'):
+def get_games_played_per_player(db_path='ofb_stats.db', team="U13"):
     """
     Get the number of games played per player grouped by age group
     """
@@ -275,14 +281,14 @@ def get_games_played_per_player(db_path='ofb_stats.db'):
         JOIN 
         games g ON p.player_id = g.player_id
         WHERE 
-        g.game_date BETWEEN '2025-08-29' and '2026-06-08' 
-        and g.minutes_played > 0   
+           g.game_date BETWEEN '2025-08-29' and '2026-06-08' 
+           AND g.minutes_played > 0   
+           AND p.team = ?
         GROUP BY 
-        p.player_id, p.player_name
-
+           p.player_id, p.player_name
         ORDER BY 
-        num_games desc
-        ''')
+           num_games desc
+        ''', (team,))
         results = cursor.fetchall()
         conn.close()
         players = []
