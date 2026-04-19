@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime
 
-def get_player_minutes(db_path='ofb_stats.db', team="U13"):
+def get_player_minutes(db_path='ofb_stats.db', team="U13", season_year="2026"):
     """
     Get total minutes played per player
     """
@@ -17,7 +17,7 @@ def get_player_minutes(db_path='ofb_stats.db', team="U13"):
             LEFT JOIN games g ON p.player_id = g.player_id
             WHERE 
                 g.game_date BETWEEN '2025-08-29' and '2026-06-08'
-                AND p.team = ?
+                AND (g.age_group = ? OR g.age_group = '')
             GROUP BY p.player_id, p.player_name
             ORDER BY total_minutes DESC
         ''', (team,))
