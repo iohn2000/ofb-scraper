@@ -1,10 +1,3 @@
-"""
-ÖFB Player Statistics Scraper - Direct page extraction
-Step 1: Visit page with Firefox and click to load player stats
-Step 2: Extract data directly from the loaded page
-Step 3: Store data in SQLite database
-Step 4: Generate visualizations
-"""
 # source ofb/bin/activate
 
 from selenium import webdriver
@@ -25,7 +18,7 @@ import matplotlib
 import traceback
 matplotlib.use('Agg')  # Use non-interactive backend
 
-def init_database(db_path='ofb_stats.db'):
+def init_database(db_path):
     """
     Initialize the SQLite database with tables for players and games
     """
@@ -36,7 +29,7 @@ def init_database(db_path='ofb_stats.db'):
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS players (
             id           INTEGER PRIMARY KEY AUTOINCREMENT,
-            player_id    TEXT NOT NULL,
+            player_id    INTEGER NOT NULL,
             player_name  TEXT NOT NULL,
             team         TEXT,
             season_year  INTEGER,
@@ -79,7 +72,7 @@ def init_database(db_path='ofb_stats.db'):
     print(f"✓ Database initialized: {db_path}")
 
 
-def save_player_to_db(player_id, player_name, team, year, db_path='ofb_stats.db'):
+def save_player_to_db(player_id, player_name, team, year, db_path):
     """
     Save or update player information in the database
     """
@@ -582,7 +575,7 @@ def scrape_player_stats(player_id, team, year=2026, skip_trigger=False):
     return {'spieleAlle': games_data}
 
 
-def save_player_stats_to_db(player_id, player_name, team, year, data, db_path='ofb_stats.db'):
+def save_player_stats_to_db(player_id, player_name, team, year, data, db_path):
     """
     Save player statistics to database
     Returns tuple: (new_games_count, updated_games_count)
@@ -641,7 +634,7 @@ if __name__ == "__main__":
    import argparse
 
    parser = argparse.ArgumentParser(description='ÖFB Player Statistics Scraper')
-   parser.add_argument('players_file', help='Path to JSON file containing player list (e.g. players_u13.json)')
+   parser.add_argument('players_file', default='data/u13-a-2026.json', help='Path to JSON file containing player list (e.g. data/u13-a-2026.json)')
    parser.add_argument('--db', default='data/ofb_stats.db', help='SQLite database path (default: ofb_stats.db)')
    args = parser.parse_args()
 
@@ -660,7 +653,7 @@ if __name__ == "__main__":
     exit(1)
 
    # Initialize database
-   init_database('data/ofb_stats.db')
+   init_database(args.db)
    print()
     
    for player in players:
@@ -670,8 +663,7 @@ if __name__ == "__main__":
        # Save to database
        if data:
            new_games, updated_games = save_player_stats_to_db(
-               player['id'], player['name'], player['team'], player['year'], data
-           )
+               player['id'], player['name'], player['team'], player['year'], data, args.db)
            print(f"✓ Database updated: {new_games} new games, {updated_games} updated")
       
        print()
@@ -679,15 +671,3 @@ if __name__ == "__main__":
    print("\n" + "=" * 80)
    print("All players processed! Data saved to ofb_stats.db")
    print("=" * 80)
-    
-    # Generate visualizations
-   print("\nGenerating player minutes chart...")
-   chart_file = generate_minutes_chart('ofb_stats.db', 'player_minutes_' + players[0]['team'] + '.png',players[0]['team'])
-   if chart_file:
-       print(f"Minutes chart available at: {chart_file}")
-    
-   print("\nGenerating player goals chart...")
-   goals_chart = generate_goals_chart('ofb_stats.db', 'player_goals_' + players[0]['team'] + '.png',players[0]['team'])
-   if goals_chart:
-       print(f"Goals chart available at: {goals_chart}")
-
