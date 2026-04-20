@@ -642,7 +642,7 @@ if __name__ == "__main__":
 
    parser = argparse.ArgumentParser(description='ÖFB Player Statistics Scraper')
    parser.add_argument('players_file', help='Path to JSON file containing player list (e.g. players_u13.json)')
-   parser.add_argument('--db', default='ofb_stats.db', help='SQLite database path (default: ofb_stats.db)')
+   parser.add_argument('--db', default='data/ofb_stats.db', help='SQLite database path (default: ofb_stats.db)')
    args = parser.parse_args()
 
     # Load players from JSON file
@@ -659,35 +659,35 @@ if __name__ == "__main__":
     print(f"✗ Invalid JSON in {args.players_file}: {e}")
     exit(1)
 
-    # Initialize database
-    init_database('ofb_stats.db')
-    print()
+   # Initialize database
+   init_database('data/ofb_stats.db')
+   print()
     
-    for player in players:
-        # Print to console
-        data = print_player_stats(player['id'], player['name'], player['team'], player['year'], False)
+   for player in players:
+       # Print to console
+       data = print_player_stats(player['id'], player['name'], player['team'], player['year'], False)
         
-        # Save to database
-        if data:
-            new_games, updated_games = save_player_stats_to_db(
-                player['id'], player['name'], player['team'], player['year'], data
-            )
-            print(f"✓ Database updated: {new_games} new games, {updated_games} updated")
-        
-        print()
+       # Save to database
+       if data:
+           new_games, updated_games = save_player_stats_to_db(
+               player['id'], player['name'], player['team'], player['year'], data
+           )
+           print(f"✓ Database updated: {new_games} new games, {updated_games} updated")
+      
+       print()
 
-    print("\n" + "=" * 80)
-    print("All players processed! Data saved to ofb_stats.db")
-    print("=" * 80)
+   print("\n" + "=" * 80)
+   print("All players processed! Data saved to ofb_stats.db")
+   print("=" * 80)
     
     # Generate visualizations
-    print("\nGenerating player minutes chart...")
-    chart_file = generate_minutes_chart('ofb_stats.db', 'player_minutes_' + players[0]['team'] + '.png',players[0]['team'])
-    if chart_file:
-        print(f"Minutes chart available at: {chart_file}")
+   print("\nGenerating player minutes chart...")
+   chart_file = generate_minutes_chart('ofb_stats.db', 'player_minutes_' + players[0]['team'] + '.png',players[0]['team'])
+   if chart_file:
+       print(f"Minutes chart available at: {chart_file}")
     
-    print("\nGenerating player goals chart...")
-    goals_chart = generate_goals_chart('ofb_stats.db', 'player_goals_' + players[0]['team'] + '.png',players[0]['team'])
-    if goals_chart:
-        print(f"Goals chart available at: {goals_chart}")
+   print("\nGenerating player goals chart...")
+   goals_chart = generate_goals_chart('ofb_stats.db', 'player_goals_' + players[0]['team'] + '.png',players[0]['team'])
+   if goals_chart:
+       print(f"Goals chart available at: {goals_chart}")
 

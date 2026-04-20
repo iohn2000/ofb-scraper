@@ -27,10 +27,7 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 
-TEAM = "U13-A"
-TEAM = "U15"
-ROSTER_URL = "https://vereine.oefb.at/ScOstbahnXi/Mannschaften/Saison-2025-26/" + TEAM + "/Kader/"
-YEAR = 2026
+
 
 
 def make_driver(headless: bool = True) -> webdriver.Firefox:
@@ -141,6 +138,14 @@ def scrape_roster(roster_url: str) -> list[dict]:
 
     return players
 
+#TEAM = "U13-A"
+#TEAM = "U13-B"
+TEAM = "U14"
+#TEAM = "U15"
+#TEAM = "U15"
+#TEAM = "U16"
+ROSTER_URL = "https://vereine.oefb.at/ScOstbahnXi/Mannschaften/Saison-2025-26/" + TEAM + "/Kader/"
+YEAR = 2026
 
 def main():
     players = scrape_roster(ROSTER_URL)
@@ -153,9 +158,9 @@ def main():
         print(f'    {{ "name": "{p["name"]}", "id": {p["id"]}, "team": "{p["team"]}", "year": {p["year"]} }},')
     print("]")
 
-    with open(f"{TEAM}-{YEAR}.json", "w", encoding="utf-8") as f:
+    with open(f"data/{TEAM}-{YEAR}.json", "w", encoding="utf-8") as f:
         json.dump(players, f, ensure_ascii=False, indent=4)
-    print(f"\nSaved to: {TEAM}-{YEAR}.json")
+    print(f"\nSaved to: data/{TEAM}-{YEAR}.json")
 
 
 if __name__ == "__main__":

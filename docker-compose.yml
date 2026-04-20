@@ -14,7 +14,7 @@ services:
       # Mount frontend static for hot-reload
       - ./frontend/static:/app/frontend/static
       # Mount database as read-only
-      - ./ofb_stats.db:/app/ofb_stats.db:ro
+      - ./data/ofb_stats.db:/app/ofb_stats.db:ro
     environment:
       - PYTHONUNBUFFERED=1
       - GUNICORN_WORKERS=4
