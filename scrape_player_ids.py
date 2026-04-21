@@ -138,16 +138,16 @@ def scrape_roster(roster_url: str) -> list[dict]:
 
     return players
 
-TEAM = "U13"
+#TEAM = "U13"
 #TEAM = "U14"
-#TEAM = "U15"
-#TEAM = "U15"
+TEAM = "U15"
 #TEAM = "U16"
-KADER = "U13-A"
-VEREIN = "DSG SUSA Vienna"
-#ROSTER_URL = "https://vereine.oefb.at/ScOstbahnXi/Mannschaften/Saison-2025-26/" + KADER + "/Kader/"
+#KADER = "U13-A"
+KADER = "U15"
+VEREIN = "OstbXI"
+ROSTER_URL = "https://vereine.oefb.at/ScOstbahnXi/Mannschaften/Saison-2025-26/" + KADER + "/Kader/"
 #ROSTER_URL = "https://vereine.oefb.at/PHHFortuna05/Mannschaften/Saison-2025-26/U13-A/Kader/"
-ROSTER_URL = "https://vereine.oefb.at/FcSusaVienna/Mannschaften/Saison-2025-26/U13-A/Kader/"
+#ROSTER_URL = "https://vereine.oefb.at/FcSusaVienna/Mannschaften/Saison-2025-26/U13-A/Kader/"
 YEAR = 2026
 
 def main():
