@@ -55,10 +55,10 @@ def get_player_minutes(db_path='ofb_stats.db', team="U13", date_from='2025-08-29
             LEFT JOIN games g ON p.player_id = g.player_id
             WHERE 
                 g.game_date BETWEEN ? AND ?
-                AND g.age_group = ?
+                AND g.age_group = ? AND p.team = ?
             GROUP BY p.player_id, p.player_name
             ORDER BY total_minutes DESC
-        ''', (date_from, date_to, team))
+        ''', (date_from, date_to, team, team))
         results = cursor.fetchall()
         conn.close()
         player_names = [row[0] for row in results]
@@ -82,11 +82,11 @@ def get_player_goals(db_path='ofb_stats.db', team="U13", date_from='2025-08-29',
             LEFT JOIN games g ON p.player_id = g.player_id
             WHERE 
                 g.game_date BETWEEN ? AND ?
-                AND g.age_group = ?
+                AND g.age_group = ? AND p.team = ?
             GROUP BY p.player_id, p.player_name
             HAVING SUM(g.goals) > 0
             ORDER BY total_goals DESC
-        ''', (date_from, date_to, team))
+        ''', (date_from, date_to, team, team))
         results = cursor.fetchall()
         conn.close()
         player_names = [row[0] for row in results]
@@ -276,11 +276,11 @@ def get_games_played_per_player(db_path='ofb_stats.db', team="U13", date_from='2
             JOIN games g ON p.player_id = g.player_id
             WHERE 
                 g.game_date BETWEEN ? AND ?
-                AND g.age_group = ?
+                AND g.age_group = ? AND p.team = ?
                 AND g.minutes_played > 0
             GROUP BY p.player_id, p.player_name
             ORDER BY num_games DESC
-        ''', (date_from, date_to, team))
+        ''', (date_from, date_to, team, team))
         results = cursor.fetchall()
         conn.close()
         players = []

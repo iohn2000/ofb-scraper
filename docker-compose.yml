@@ -19,3 +19,9 @@ services:
       - PYTHONUNBUFFERED=1
       - GUNICORN_WORKERS=4
     restart: unless-stopped
+    networks:
+      - immich-net
+
+networks:
+  immich-net:
+    external: true
