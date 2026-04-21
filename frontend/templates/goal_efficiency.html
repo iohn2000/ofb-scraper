@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-star text-info"></i> Goal Efficiency Per Game
+        </h1>
+        <p class="text-muted mb-4">Individual game performances ranked by goal-scoring efficiency. Shows which games were most efficient: most goals scored in least amount of playing time.</p>
+        <div class="card shadow">
+            <div class="card-body">
+                <p class="text-muted mb-3">Most goals scored in the least amount of minutes per individual game</p>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover" id="goalEfficiencyTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Player</th>
+                                <th class="text-center">Date</th>
+                                <th class="text-center">Competition</th>
+                                <th class="text-center">Home Team</th>
+                                <th class="text-center">Away Team</th>
+                                <th class="text-center">Goals</th>
+                                <th class="text-center">Minutes</th>
+                                <th class="text-center">Goals/90min</th>
+                                <th class="text-center">Min/Goal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="goalEfficiencyTableBody">
+                            <tr>
+                                <td colspan="9" class="text-center text-muted">
+                                    <div class="spinner-border spinner-border-sm" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    Loading data...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Fetch goal efficiency data and populate table
+    fetch('/api/goal-efficiency')
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('goalEfficiencyTableBody');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No data available</td></tr>';
+                return;
+            }
+
+            data.forEach(game => {
+                const row = document.createElement('tr');
+                const dateObj = new Date(game.game_date);
+                const dateStr = dateObj.toLocaleDateString('de-AT', { year: 'numeric', month: '2-digit', day: '2-digit' });
+                
+                row.innerHTML = `
+                    <td><strong>${game.player_name}</strong></td>
+                    <td class="text-center">${dateStr}</td>
+                    <td class="text-center">${game.competition}</td>
+                    <td class="text-center">${game.home_team}</td>
+                    <td class="text-center">${game.away_team}</td>
+                    <td class="text-center"><span class="badge bg-success">${game.goals}</span></td>
+                    <td class="text-center">${game.minutes_played}</td>
+                    <td class="text-center"><span class="badge bg-info">${game.goals_per_90_minutes}</span></td>
+                    <td class="text-center">${game.minutes_per_goal}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching goal efficiency data:', error);
+            const tbody = document.getElementById('goalEfficiencyTableBody');
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-danger">Error loading data</td></tr>';
+        });
+</script>
+{% endblock %}

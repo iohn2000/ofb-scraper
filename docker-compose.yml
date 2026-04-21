@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: ofb-stats-web
+    ports:
+      - "5001:5000"
+    volumes:
+      # Mount backend folder for hot-reload
+      - ./backend:/app/backend
+      # Mount frontend templates for hot-reload
+      - ./frontend/templates:/app/frontend/templates
+      # Mount frontend static for hot-reload
+      - ./frontend/static:/app/frontend/static
+      # Mount database as read-only
+      - ./data/ofb_stats.db:/app/ofb_stats.db:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - GUNICORN_WORKERS=4
+    restart: unless-stopped

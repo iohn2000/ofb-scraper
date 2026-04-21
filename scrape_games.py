@@ -1,10 +1,3 @@
-"""
-ÖFB Player Statistics Scraper - Direct page extraction
-Step 1: Visit page with Firefox and click to load player stats
-Step 2: Extract data directly from the loaded page
-Step 3: Store data in SQLite database
-Step 4: Generate visualizations
-"""
 # source ofb/bin/activate
 
 from selenium import webdriver
@@ -22,9 +15,14 @@ from bs4 import BeautifulSoup
 import re
 import matplotlib.pyplot as plt
 import matplotlib
+import traceback
 matplotlib.use('Agg')  # Use non-interactive backend
+import concurrent.futures
+import threading
 
-def init_database(db_path='ofb_stats.db'):
+db_write_lock = threading.Lock()
+
+def init_database(db_path):
     """
     Initialize the SQLite database with tables for players and games
     """
@@ -34,11 +32,13 @@ def init_database(db_path='ofb_stats.db'):
     # Create players table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS players (
-            player_id INTEGER PRIMARY KEY,
-            player_name TEXT NOT NULL,
-            team TEXT,
-            season_year INTEGER,
-            last_updated TEXT DEFAULT CURRENT_TIMESTAMP
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_id    INTEGER NOT NULL,
+            player_name  TEXT NOT NULL,
+            team         TEXT,
+            season_year  INTEGER,
+            last_updated TEXT DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(player_id, team, season_year)
         )
     ''')
     
@@ -76,17 +76,21 @@ def init_database(db_path='ofb_stats.db'):
     print(f"✓ Database initialized: {db_path}")
 
 
-def save_player_to_db(player_id, player_name, team, year, db_path='ofb_stats.db'):
+def save_player_to_db(player_id, player_name, team, year, db_path):
     """
     Save or update player information in the database
     """
+    
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
     cursor.execute('''
-        INSERT OR REPLACE INTO players (player_id, player_name, team, season_year, last_updated)
+        INSERT INTO players (player_id, player_name, team, season_year, last_updated)
         VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-    ''', (player_id, player_name, team, year))
+        ON CONFLICT(player_id, team, season_year) DO UPDATE SET
+            player_name  = excluded.player_name,
+            last_updated = CURRENT_TIMESTAMP
+    ''', (player_id, player_name, team, year))   
     
     conn.commit()
     conn.close()
@@ -189,7 +193,7 @@ def save_games_to_db(player_id, games_data, db_path='ofb_stats.db'):
     return new_games, updated_games
 
 
-def generate_minutes_chart(db_path='ofb_stats.db', output_file='player_minutes.png'):
+def generate_minutes_chart(db_path='ofb_stats.db', output_file='player_minutes.png', team="U13"):
     """
     Generate a bar chart showing total minutes played for each player
     Saves the chart as a PNG file
@@ -199,15 +203,17 @@ def generate_minutes_chart(db_path='ofb_stats.db', output_file='player_minutes.p
     
     # Query to get total minutes per player
     cursor.execute('''
- SELECT 
+        SELECT 
             p.player_name,
             SUM(g.minutes_played) as total_minutes
         FROM players p
         LEFT JOIN games g ON p.player_id = g.player_id
-        where g.game_date BETWEEN '2025-08-29' and '2026-06-08'
+        WHERE 
+            g.game_date BETWEEN '2025-08-29' and '2026-06-08'
+            AND p.team = ?       
         GROUP BY p.player_id, p.player_name
         ORDER BY total_minutes DESC
-    ''')
+    ''', (team,))
     
     results = cursor.fetchall()
     conn.close()
@@ -233,7 +239,7 @@ def generate_minutes_chart(db_path='ofb_stats.db', output_file='player_minutes.p
     
     plt.ylabel('Player', fontsize=12, fontweight='bold')
     plt.xlabel('Total Minutes Played', fontsize=12, fontweight='bold')
-    plt.title('ÖFB U13 - Total Minutes Played by Player', fontsize=14, fontweight='bold', pad=20)
+    plt.title('ÖFB '' + team+ '' - Total Minutes Played by Player', fontsize=14, fontweight='bold', pad=20)
     plt.grid(axis='x', alpha=0.3, linestyle='--')
     plt.tight_layout()
     
@@ -245,7 +251,7 @@ def generate_minutes_chart(db_path='ofb_stats.db', output_file='player_minutes.p
     return output_file
 
 
-def generate_goals_chart(db_path='ofb_stats.db', output_file='player_goals.png'):
+def generate_goals_chart(db_path='ofb_stats.db', output_file='player_goals.png', team="U13"):
     """
     Generate a bar chart showing total goals scored for each player
     Saves the chart as a PNG file
@@ -260,11 +266,13 @@ def generate_goals_chart(db_path='ofb_stats.db', output_file='player_goals.png')
             SUM(g.goals) as total_goals
         FROM players p
         LEFT JOIN games g ON p.player_id = g.player_id
-        WHERE g.game_date BETWEEN '2025-08-29' and '2026-06-08'
+        WHERE 
+            g.game_date BETWEEN '2025-08-29' and '2026-06-08'
+            AND p.team = ?       
         GROUP BY p.player_id, p.player_name
         HAVING SUM(g.goals) > 0
         ORDER BY total_goals DESC
-    ''')
+    ''', (team,))
     
     results = cursor.fetchall()
     conn.close()
@@ -290,7 +298,7 @@ def generate_goals_chart(db_path='ofb_stats.db', output_file='player_goals.png')
     
     plt.ylabel('Player', fontsize=12, fontweight='bold')
     plt.xlabel('Total Goals Scored', fontsize=12, fontweight='bold')
-    plt.title('ÖFB U13 - Total Goals Scored by Player', fontsize=14, fontweight='bold', pad=20)
+    plt.title('ÖFB ''+ team + '' - Total Goals Scored by Player', fontsize=14, fontweight='bold', pad=20)
     plt.grid(axis='x', alpha=0.3, linestyle='--')
     plt.tight_layout()
     
@@ -302,7 +310,7 @@ def generate_goals_chart(db_path='ofb_stats.db', output_file='player_goals.png')
     return output_file
 
 
-def scrape_from_page(player_id, team="U13", year=2026):
+def scrape_from_page(player_id, team, year=2026):
     """
     Visit the player page with Firefox and extract data directly from the loaded page
     """
@@ -397,14 +405,7 @@ def scrape_from_page(player_id, team="U13", year=2026):
         htmlResult = driver.execute_script("return document.getElementsByTagName('html')[0].innerHTML")
         page_source = htmlResult #driver.page_source
         
-        # Save page source for debugging
-        try:
-            with open('debug_rendered.html', 'w', encoding='utf-8') as f:
-                f.write(page_source)
-            print("✓ Saved page HTML to debug_rendered.html")
-        except:
-            pass
-        
+       
         driver.quit()
         
         # Parse the rendered HTML to extract game data
@@ -486,14 +487,8 @@ def scrape_from_page(player_id, team="U13", year=2026):
             for game in games_data:
                 datum_str = game.get('datum', '')
                 bewerb = game.get('bewerb', '')
-                
-                # Extract age group (U13, U14, U12, etc.) from competition name
-                age_match = re.search(r'U\d+', bewerb.upper())
-                if age_match:
-                    game['ageGroup'] = age_match.group(0)
-                else:
-                    game['ageGroup'] = ''
-                
+                game['ageGroup'] = team
+
                 # Parse date from format: "DD.MM.YYYY, HH:MM Uhr" to timestamp
                 # Example: "15.11.2025, 11:30 Uhr"
                 if datum_str and '.' in datum_str:
@@ -518,14 +513,12 @@ def scrape_from_page(player_id, team="U13", year=2026):
             
         except Exception as e:
             print(f"Error parsing HTML: {e}")
-            import traceback
             traceback.print_exc()
         
         return games_data
         
     except Exception as e:
         print(f"Error visiting page: {e}")
-        import traceback
         traceback.print_exc()
         if driver:
             driver.quit()
@@ -565,7 +558,7 @@ def fetch_json_data(player_id, team="U13", year=2026):
         return None
 
 
-def scrape_player_stats(player_id, team="U13", year=2026, skip_trigger=False):
+def scrape_player_stats(player_id, team, year=2026, skip_trigger=False):
     """
     Complete scraping process:
     Extract data from rendered HTML in the browser
@@ -586,7 +579,7 @@ def scrape_player_stats(player_id, team="U13", year=2026, skip_trigger=False):
     return {'spieleAlle': games_data}
 
 
-def save_player_stats_to_db(player_id, player_name, team, year, data, db_path='ofb_stats.db'):
+def save_player_stats_to_db(player_id, player_name, team, year, data, db_path):
     """
     Save player statistics to database
     Returns tuple: (new_games_count, updated_games_count)
@@ -605,7 +598,7 @@ def save_player_stats_to_db(player_id, player_name, team, year, data, db_path='o
     return new_games, updated_games
 
 
-def print_player_stats(player_id, player_name, team="U13", year=2026, skip_trigger=False):
+def print_player_stats(player_id, player_name, team, year=2026, skip_trigger=False):
     """
     Fetch and display player statistics to console
     """
@@ -641,67 +634,92 @@ def print_player_stats(player_id, player_name, team="U13", year=2026, skip_trigg
     return data
 
 
-if __name__ == "__main__":
-    # Initialize database
-    init_database('ofb_stats.db')
-    print()
-    
-    # Player data from your file
-    players = [
-        { "name": "Kayra Akca",            "id": 1416519, "team": "U13", "year": 2026},
-        { "name": "Musab Aslan",           "id": 1501804, "team": "U13", "year": 2026},
-        { "name": "Ledian Avdyli",         "id": 1397521, "team": "U13", "year": 2026},
-        { "name": "James Bogner",          "id": 1526240, "team": "U13", "year": 2026},
-        { "name": "Alen Bradaric",         "id": 1541676, "team": "U13", "year": 2026},
-        { "name": "Burak Candan",          "id": 1492869, "team": "U13", "year": 2026},
-        { "name": "Osman-Demir",           "id": 1452690, "team": "U13", "year": 2026},
-        { "name": "Oskar Doerflinger",     "id": 1397635, "team": "U13", "year": 2026},
-        { "name": "Emmanuel-Edosomwan",    "id": 1290321, "team": "U13", "year": 2026},
-        { "name": "Burak-Erdal",           "id": 1517009, "team": "U13", "year": 2026},
-        { "name": "Oguzhan-Erkoc",         "id": 1208103, "team": "U13", "year": 2026},
-        { "name": "Fabricio Facalet",      "id": 1323567, "team": "U13", "year": 2026},
-        { "name": "Liam Fleck",            "id": 1454580, "team": "U13", "year": 2026},
-        { "name": "Ashab Gemici",          "id": 1217525, "team": "U13", "year": 2026},
-        { "name": "Berat Cetin Hatunoglu", "id": 1360273, "team": "U13", "year": 2026},
-        { "name": "Ismet Inan",            "id": 1366003, "team": "U13", "year": 2026},
-        { "name": "Adrian Jarzmik",        "id": 1542533, "team": "U13", "year": 2026},
-        { "name": "Halil-Keskin",          "id": 1302985, "team": "U13", "year": 2026},
-        { "name": "Mert Koese",            "id": 1350034, "team": "U13", "year": 2026},
-        { "name": "Valerio Molony",        "id": 1447767, "team": "U13", "year": 2026},
-        { "name": "Dominik Muellner",      "id": 1240755, "team": "U13", "year": 2026},
-        { "name": "Asaf Ordulu",           "id": 1416861, "team": "U13", "year": 2026},
-        { "name": "Anthony Rodriguez",     "id": 1370839, "team": "U13", "year": 2026},
-        { "name": "Daniel Strugari",       "id": 1453500, "team": "U13", "year": 2026},
-        { "name": "Talha Temiz",           "id": 1449355, "team": "U13", "year": 2026},
-        { "name": "Cihangir Tosun",        "id": 1286934, "team": "U13", "year": 2026},
-        { "name": "Emir Oegmen",           "id": 1245535, "team": "U13", "year": 2026},                                        
-    ]
 
-    for player in players:
-        # Print to console
-        data = print_player_stats(player['id'], player['name'], player['team'], player['year'], False)
-        
-        # Save to database
-        if data:
+def process_player(player, db_path):
+    """
+    Worker function: scrape one player and save to DB.
+    Designed to run in a thread pool — each call opens its own Firefox instance.
+    """
+    player_id   = player['id']
+    player_name = player['name']
+    team        = player['team']
+    year        = player['year']
+
+    print(f"[{player_name}] Starting scrape...")
+
+    try:
+        data = scrape_player_stats(player_id, team, year, skip_trigger=False)
+
+        if not data or 'spieleAlle' not in data:
+            print(f"[{player_name}] ✗ No data returned")
+            return player_name, 0, 0
+
+        games = data['spieleAlle']
+        print(f"[{player_name}] ✓ Found {len(games)} games")
+
+        # Serialize DB writes to avoid SQLite "database is locked" errors
+        with db_write_lock:
             new_games, updated_games = save_player_stats_to_db(
-                player['id'], player['name'], player['team'], player['year'], data
+                player_id, player_name, team, year, data, db_path
             )
-            print(f"✓ Database updated: {new_games} new games, {updated_games} updated")
-        
-        print()
 
-    print("\n" + "=" * 80)
-    print("All players processed! Data saved to ofb_stats.db")
-    print("=" * 80)
-    
-    # Generate visualizations
-    print("\nGenerating player minutes chart...")
-    chart_file = generate_minutes_chart('ofb_stats.db', 'player_minutes.png')
-    if chart_file:
-        print(f"Minutes chart available at: {chart_file}")
-    
-    print("\nGenerating player goals chart...")
-    goals_chart = generate_goals_chart('ofb_stats.db', 'player_goals.png')
-    if goals_chart:
-        print(f"Goals chart available at: {goals_chart}")
+        print(f"[{player_name}] ✓ DB: {new_games} new, {updated_games} updated")
+        return player_name, new_games, updated_games
 
+    except Exception as e:
+        print(f"[{player_name}] ✗ Error: {e}")
+        traceback.print_exc()
+        return player_name, 0, 0
+
+
+
+if __name__ == "__main__":
+   import argparse
+
+   parser = argparse.ArgumentParser(description='ÖFB Player Statistics Scraper')
+   parser.add_argument('players_file', default='data/u13-a-2026.json', help='Path to JSON file containing player list (e.g. data/u13-a-2026.json)')
+   parser.add_argument('--db', default='data/ofb_stats.db', help='SQLite database path (default: ofb_stats.db)')
+   parser.add_argument('--workers', default=3, type=int, help='Number of parallel Firefox instances (default: 3)')
+   args = parser.parse_args()
+
+   # Load players
+   try:
+       with open(args.players_file, 'r', encoding='utf-8') as f:
+           players = json.load(f)
+       print(f"✓ Loaded {len(players)} players from {args.players_file}")
+   except FileNotFoundError:
+       print(f"✗ File not found: {args.players_file}")
+       exit(1)
+   except json.JSONDecodeError as e:
+       print(f"✗ Invalid JSON in {args.players_file}: {e}")
+       exit(1)
+
+   # Enable WAL mode so SQLite handles concurrent reads gracefully
+   conn = sqlite3.connect(args.db)
+   conn.execute("PRAGMA journal_mode=WAL")
+   conn.close()
+   init_database(args.db)
+   print(f"\nStarting parallel scrape with {args.workers} workers...\n")
+   print("=" * 80)
+
+   results = []
+   with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
+       futures = {
+           executor.submit(process_player, player, args.db): player['name']
+           for player in players
+       }
+       for future in concurrent.futures.as_completed(futures):
+           player_name = futures[future]
+           try:
+               result = future.result()
+               results.append(result)
+           except Exception as e:
+               print(f"[{player_name}] ✗ Unhandled exception: {e}")
+    # Summary
+    
+   print("\n" + "=" * 80)
+   print(f"All {len(players)} players processed!")
+   total_new     = sum(r[1] for r in results)
+   total_updated = sum(r[2] for r in results)
+   print(f"Total: {total_new} new games, {total_updated} updated across all players")
+   print("=" * 80)
