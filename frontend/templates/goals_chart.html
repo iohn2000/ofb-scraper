@@ -18,6 +18,7 @@
             <i class="fas fa-futbol text-success"></i> Total Goals Scored by Player
         </h1>
         <p class="text-muted mb-4">Aggregated goals scored across all games in the season. Shows offensive contribution and goal-scoring impact for each player.</p>
+        <div class="alert alert-light py-2 px-3 mb-3 team-season-info" role="alert"></div>
 
         <!-- Chart card -->
         <div class="card shadow mb-4">
@@ -97,7 +98,7 @@
 
     Chart.register(dataLabelsPlugin);
 
-    fetch('/api/goals')
+    fetch('/api/goals' + getTeamParams())
         .then(response => response.json())
         .then(data => {
             // --- Chart ---

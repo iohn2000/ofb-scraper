@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 import os
 import sys
 from pathlib import Path
@@ -6,7 +6,11 @@ from pathlib import Path
 # Add backend to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from utils.queries import get_games_played_per_player, get_player_minutes, get_player_goals, get_player_efficiency, get_goal_efficiency_per_game, get_minutes_matrix
+from utils.queries import (
+    get_games_played_per_player, get_player_minutes, get_player_goals,
+    get_player_efficiency, get_goal_efficiency_per_game, get_minutes_matrix,
+    get_all_seasons, get_season_dates
+)
 
 app = Flask(__name__, 
             template_folder='../frontend/templates',
@@ -17,6 +21,18 @@ DB_PATH = '/app/ofb_stats.db'
 if not os.path.exists(DB_PATH):
     # Fallback for local development
     DB_PATH = 'ofb_stats.db'
+
+
+def _get_filter_params():
+    """Extract team/year from query string and look up season date range."""
+    team = request.args.get('team', 'U13')
+    year = request.args.get('year', 2026, type=int)
+    date_from, date_to = get_season_dates(DB_PATH, team, year)
+    if date_from is None:
+        # Fallback defaults
+        date_from = f'{year - 1}-08-29'
+        date_to = f'{year}-06-08'
+    return team, date_from, date_to
 
 
 @app.route('/')
@@ -48,54 +64,65 @@ def games_played():
     return render_template('games_played.html')
 
 
-#
-# Page for minutes matrix
-#
 @app.route('/minutes-matrix')
 def minutes_matrix():
     """Minutes matrix page"""
     return render_template('minutes_matrix.html')
 
+
 #
-# api endpoints for charts and stats
+# API endpoints
 #
+@app.route('/api/seasons')
+def api_seasons():
+    """API endpoint for available season combos"""
+    data = get_all_seasons(DB_PATH)
+    return jsonify(data)
+
+
 @app.route('/api/minutes')
 def api_minutes():
     """API endpoint for player minutes data"""
-    data = get_player_minutes(DB_PATH, team="U13")
+    team, date_from, date_to = _get_filter_params()
+    data = get_player_minutes(DB_PATH, team=team, date_from=date_from, date_to=date_to)
     return jsonify(data)
 
 
 @app.route('/api/goals')
 def api_goals():
     """API endpoint for player goals data"""
-    data = get_player_goals(DB_PATH)
+    team, date_from, date_to = _get_filter_params()
+    data = get_player_goals(DB_PATH, team=team, date_from=date_from, date_to=date_to)
     return jsonify(data)
 
 
 @app.route('/api/efficiency')
 def api_efficiency():
     """API endpoint for player efficiency data"""
-    data = get_player_efficiency(DB_PATH)
+    team, date_from, date_to = _get_filter_params()
+    data = get_player_efficiency(DB_PATH, team=team, date_from=date_from, date_to=date_to)
     return jsonify(data)
 
 
 @app.route('/api/goal-efficiency')
 def api_goal_efficiency():
     """API endpoint for goal efficiency per game data"""
-    data = get_goal_efficiency_per_game(DB_PATH)
+    team, date_from, date_to = _get_filter_params()
+    data = get_goal_efficiency_per_game(DB_PATH, team=team, date_from=date_from, date_to=date_to)
     return jsonify(data)
 
 @app.route('/api/games-played')
 def api_games_played():
     """API endpoint for games played per player"""
-    data = get_games_played_per_player(DB_PATH)
+    team, date_from, date_to = _get_filter_params()
+    data = get_games_played_per_player(DB_PATH, team=team, date_from=date_from, date_to=date_to)
     return jsonify(data)
 
 @app.route('/api/minutes-matrix')
 def api_minutes_matrix():
     """API endpoint for minutes matrix (players x games)"""
-    data = get_minutes_matrix(DB_PATH)
+    team, date_from, date_to = _get_filter_params()
+    data = get_minutes_matrix(DB_PATH, team=team, date_from=date_from, date_to=date_to)
     return jsonify(data)
 
 if __name__ == '__main__':
