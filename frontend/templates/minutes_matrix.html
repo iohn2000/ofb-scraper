@@ -7,6 +7,7 @@
             <i class="fas fa-table text-success"></i> Minutes Played Matrix
         </h1>
         <p class="text-muted mb-4">Minutes played by each player in each game. Columns are games (by date), rows are players (by name).</p>
+        <div class="alert alert-light py-2 px-3 mb-3 team-season-info" role="alert"></div>
         <div class="card shadow">
             <div class="card-body">
                 <div class="table-responsive">
@@ -38,7 +39,7 @@
 {% block scripts %}
 <script>
 // Fetch minutes matrix data and populate table
-fetch('/api/minutes-matrix')
+fetch('/api/minutes-matrix' + getTeamParams())
     .then(response => response.json())
     .then(data => {
         // data.games: [{id, date, opponent, ...}], ordered by date

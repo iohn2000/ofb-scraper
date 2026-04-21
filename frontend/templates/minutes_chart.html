@@ -18,6 +18,7 @@
             <i class="fas fa-clock text-primary"></i> Total Minutes Played by Player
         </h1>
         <p class="text-muted mb-4">Aggregated minutes played across all games in the season. Shows playing time distribution and overall involvement in team matches.</p>
+        <div class="alert alert-light py-2 px-3 mb-3 team-season-info" role="alert"></div>
 
         <!-- Chart card -->
         <div class="card shadow mb-4">
@@ -97,7 +98,7 @@
 
     Chart.register(dataLabelsPlugin);
 
-    fetch('/api/minutes')
+    fetch('/api/minutes' + getTeamParams())
         .then(response => response.json())
         .then(data => {
             // --- Chart ---

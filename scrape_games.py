@@ -70,10 +70,47 @@ def init_database(db_path):
         CREATE INDEX IF NOT EXISTS idx_player_games 
         ON games(player_id, game_date)
     ''')
+
+    # Create seasons table for date ranges per team/year
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS seasons (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            age_group TEXT NOT NULL,
+            season_year INTEGER NOT NULL,
+            date_from TEXT NOT NULL,
+            date_to TEXT NOT NULL,
+            UNIQUE(age_group, season_year)
+        )
+    ''')
     
     conn.commit()
     conn.close()
     print(f"✓ Database initialized: {db_path}")
+
+
+def seed_seasons(db_path):
+    """
+    Seed the seasons table with known season date ranges.
+    Each season runs roughly from late August to early June.
+    """
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    known_seasons = [
+        ('U13', 2026, '2025-08-29', '2026-06-08'),
+        ('U14', 2026, '2025-08-29', '2026-06-08'),
+        ('U15', 2026, '2025-08-29', '2026-06-08'),
+    ]
+
+    for age_group, year, date_from, date_to in known_seasons:
+        cursor.execute('''
+            INSERT OR IGNORE INTO seasons (age_group, season_year, date_from, date_to)
+            VALUES (?, ?, ?, ?)
+        ''', (age_group, year, date_from, date_to))
+
+    conn.commit()
+    conn.close()
+    print(f"✓ Seasons seeded: {len(known_seasons)} entries")
 
 
 def save_player_to_db(player_id, player_name, team, year, db_path):
@@ -699,6 +736,7 @@ if __name__ == "__main__":
    conn.execute("PRAGMA journal_mode=WAL")
    conn.close()
    init_database(args.db)
+   seed_seasons(args.db)
    print(f"\nStarting parallel scrape with {args.workers} workers...\n")
    print("=" * 80)
 
