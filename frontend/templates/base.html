@@ -66,6 +66,11 @@
                             <i class="fas fa-trophy"></i> Games Played
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'player_overview' %}active{% endif %}" href="/player-overview">
+                            <i class="fas fa-users"></i> Player Overview
+                        </a>
+                    </li>
                     <!--
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'minutes_matrix' %}active{% endif %}" href="/minutes-matrix">

@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils.queries import (
     get_games_played_per_player, get_player_minutes, get_player_goals,
     get_player_efficiency, get_goal_efficiency_per_game, get_minutes_matrix,
-    get_all_seasons, get_season_dates
+    get_all_seasons, get_season_dates, get_player_overview, get_all_player_names
 )
 
 app = Flask(__name__, 
@@ -62,6 +62,12 @@ def goal_efficiency():
 def games_played():
     """Games played per player page"""
     return render_template('games_played.html')
+
+
+@app.route('/player-overview')
+def player_overview():
+    """Player overview stats page"""
+    return render_template('player_overview.html')
 
 
 @app.route('/minutes-matrix')
@@ -117,6 +123,27 @@ def api_games_played():
     team, date_from, date_to = _get_filter_params()
     data = get_games_played_per_player(DB_PATH, team=team, date_from=date_from, date_to=date_to)
     return jsonify(data)
+
+@app.route('/api/player-overview')
+def api_player_overview():
+    """API endpoint for player overview data with server-side sorting and filtering"""
+    team, date_from, date_to = _get_filter_params()
+    players_param = request.args.get('players', '')
+    players = [p.strip() for p in players_param.split(',') if p.strip()] if players_param else None
+    sort_by = request.args.get('sort_by', 'player_name')
+    sort_dir = request.args.get('sort_dir', 'asc')
+    data = get_player_overview(DB_PATH, team=team, date_from=date_from, date_to=date_to,
+                               players=players, sort_by=sort_by, sort_dir=sort_dir)
+    return jsonify(data)
+
+
+@app.route('/api/player-names')
+def api_player_names():
+    """API endpoint for all player names (for filter dropdown)"""
+    team, date_from, date_to = _get_filter_params()
+    data = get_all_player_names(DB_PATH, team=team, date_from=date_from, date_to=date_to)
+    return jsonify(data)
+
 
 @app.route('/api/minutes-matrix')
 def api_minutes_matrix():

@@ -265,6 +265,92 @@ def get_goal_efficiency_per_game(db_path='ofb_stats.db', team="U13", date_from='
         return []
 
 
+def get_player_overview(db_path='ofb_stats.db', team="U13", date_from='2025-08-29', date_to='2026-06-08',
+                       players=None, sort_by='player_name', sort_dir='asc'):
+    """Get per-player overview: games, minutes, goals, avg minutes/game, avg goals/game."""
+    VALID_SORT_COLS = {
+        'player_name': 'p.player_name',
+        'games_played': 'games_played',
+        'total_minutes': 'total_minutes',
+        'total_goals': 'total_goals',
+        'avg_minutes_per_game': 'avg_minutes_per_game',
+        'avg_goals_per_game': 'avg_goals_per_game',
+    }
+    sort_col = VALID_SORT_COLS.get(sort_by, 'p.player_name')
+    sort_direction = 'DESC' if sort_dir.lower() == 'desc' else 'ASC'
+
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        base_query = '''
+            SELECT
+                p.player_name,
+                COUNT(*) AS games_played,
+                SUM(g.minutes_played) AS total_minutes,
+                COALESCE(SUM(g.goals), 0) AS total_goals,
+                ROUND(CAST(SUM(g.minutes_played) AS FLOAT) / COUNT(*), 1) AS avg_minutes_per_game,
+                ROUND(CAST(COALESCE(SUM(g.goals), 0) AS FLOAT) / COUNT(*), 2) AS avg_goals_per_game
+            FROM players p
+            JOIN games g ON p.player_id = g.player_id
+            WHERE g.game_date BETWEEN ? AND ?
+                AND g.age_group = ? AND p.team = ?
+                AND g.minutes_played > 0
+        '''
+        params = [date_from, date_to, team, team]
+
+        if players:
+            placeholders = ','.join('?' for _ in players)
+            base_query += f' AND p.player_name IN ({placeholders})'
+            params.extend(players)
+
+        base_query += f'''
+            GROUP BY p.player_id, p.player_name
+            ORDER BY {sort_col} {sort_direction}
+        '''
+
+        cursor.execute(base_query, params)
+        results = cursor.fetchall()
+        conn.close()
+
+        return [
+            {
+                'player_name': r[0],
+                'games_played': r[1],
+                'total_minutes': r[2] or 0,
+                'total_goals': r[3] or 0,
+                'avg_minutes_per_game': r[4] or 0,
+                'avg_goals_per_game': r[5] or 0,
+            }
+            for r in results
+        ]
+    except Exception as e:
+        print(f"Error fetching player overview: {e}")
+        return []
+
+
+def get_all_player_names(db_path='ofb_stats.db', team="U13", date_from='2025-08-29', date_to='2026-06-08'):
+    """Return sorted list of player names that have game data in the given season."""
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT DISTINCT p.player_name
+            FROM players p
+            JOIN games g ON p.player_id = g.player_id
+            WHERE g.game_date BETWEEN ? AND ?
+                AND g.age_group = ? AND p.team = ?
+                AND g.minutes_played > 0
+            ORDER BY p.player_name ASC
+        ''', (date_from, date_to, team, team))
+        results = cursor.fetchall()
+        conn.close()
+        return [r[0] for r in results]
+    except Exception as e:
+        print(f"Error fetching player names: {e}")
+        return []
+
+
 def get_games_played_per_player(db_path='ofb_stats.db', team="U13", date_from='2025-08-29', date_to='2026-06-08'):
     """Get the number of games played per player."""
     try:

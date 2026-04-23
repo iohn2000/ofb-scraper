@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .filter-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+    }
+    .player-dropdown {
+        position: relative;
+        display: inline-block;
+    }
+    .player-dropdown-menu {
+        position: absolute;
+        z-index: 1050;
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        min-width: 240px;
+        max-height: 320px;
+        overflow-y: auto;
+        padding: 8px 0;
+        display: none;
+    }
+    .player-dropdown-menu.show { display: block; }
+    .player-dropdown-menu label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 14px;
+        cursor: pointer;
+        font-size: 14px;
+        white-space: nowrap;
+    }
+    .player-dropdown-menu label:hover { background: #f0f0f0; }
+    .player-dropdown-menu .dropdown-actions {
+        display: flex;
+        gap: 8px;
+        padding: 6px 14px;
+        border-bottom: 1px solid #eee;
+        margin-bottom: 4px;
+    }
+    .sort-indicator { font-size: 11px; opacity: 0.7; }
+
+    /* Clickable header columns */
+    th.sortable { cursor: pointer; user-select: none; }
+    /* Default: dark header stays dark */
+    .table-hover thead.table-dark tr:hover > th {
+        background-color: #212529 !important;
+        color: #fff !important;
+    }
+    /* Only the hovered column goes white with black text */
+    th.sortable:hover {
+        background-color: #fff !important;
+        color: #000 !important;
+    }
+</style>
+
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-users text-warning"></i> Player Overview
+        </h1>
+        <p class="text-muted mb-4">Combined per-player statistics: games, minutes, goals, and averages for the season.</p>
+        <div class="alert alert-light py-2 px-3 mb-3 team-season-info" role="alert"></div>
+
+        <!-- Filter & Sort bar -->
+        <div class="card shadow mb-4">
+            <div class="card-body py-3 px-3">
+                <div class="filter-bar">
+                    <!-- Player filter dropdown -->
+                    <div class="player-dropdown">
+                        <button class="btn btn-outline-secondary btn-sm" id="playerFilterBtn" type="button">
+                            <i class="fas fa-filter me-1"></i> Players <span class="badge bg-primary ms-1" id="playerCount"></span>
+                        </button>
+                        <div class="player-dropdown-menu" id="playerDropdown">
+                            <div class="dropdown-actions">
+                                <button class="btn btn-sm btn-link p-0" onclick="selectAllPlayers(true)">Select All</button>
+                                <button class="btn btn-sm btn-link p-0" onclick="selectAllPlayers(false)">Deselect All</button>
+                            </div>
+                            <div id="playerCheckboxes"></div>
+                        </div>
+                    </div>
+
+                    <!-- Sort controls -->
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="text-muted small mb-0">Sort by:</label>
+                        <select class="form-select form-select-sm" id="sortBySelect" style="width:auto;">
+                            <option value="player_name">Player Name</option>
+                            <option value="games_played">Games Played</option>
+                            <option value="total_minutes">Total Minutes</option>
+                            <option value="total_goals">Total Goals</option>
+                            <option value="avg_minutes_per_game">Avg Min/Game</option>
+                            <option value="avg_goals_per_game">Avg Goals/Game</option>
+                        </select>
+                        <button class="btn btn-outline-secondary btn-sm" id="sortDirBtn" title="Toggle sort direction">
+                            <i class="fas fa-sort-amount-up" id="sortDirIcon"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data table -->
+        <div class="card shadow">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover" id="overviewTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th class="sortable" data-col="player_name">Player <span class="sort-indicator" id="ind-player_name"></span></th>
+                                <th class="sortable text-end" data-col="games_played">Games <span class="sort-indicator" id="ind-games_played"></span></th>
+                                <th class="sortable text-end" data-col="total_minutes">Minutes <span class="sort-indicator" id="ind-total_minutes"></span></th>
+                                <th class="sortable text-end" data-col="total_goals">Goals <span class="sort-indicator" id="ind-total_goals"></span></th>
+                                <th class="sortable text-end" data-col="avg_minutes_per_game">Avg Min/Game <span class="sort-indicator" id="ind-avg_minutes_per_game"></span></th>
+                                <th class="sortable text-end" data-col="avg_goals_per_game">Avg Goals/Game <span class="sort-indicator" id="ind-avg_goals_per_game"></span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="overviewTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">
+                                    <div class="spinner-border spinner-border-sm" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    Loading data...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let allPlayerNames = [];
+    let selectedPlayers = new Set();
+    let currentSortBy = 'player_name';
+    let currentSortDir = 'asc';
+
+    // --- Player filter dropdown toggle ---
+    const filterBtn = document.getElementById('playerFilterBtn');
+    const dropdown = document.getElementById('playerDropdown');
+
+    filterBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('show');
+    });
+    document.addEventListener('click', (e) => {
+        if (!dropdown.contains(e.target) && e.target !== filterBtn) {
+            dropdown.classList.remove('show');
+        }
+    });
+
+    function selectAllPlayers(checked) {
+        const boxes = document.querySelectorAll('#playerCheckboxes input[type=checkbox]');
+        boxes.forEach(cb => { cb.checked = checked; });
+        if (checked) {
+            selectedPlayers = new Set(allPlayerNames);
+        } else {
+            selectedPlayers.clear();
+        }
+        updatePlayerCount();
+        fetchOverviewData();
+    }
+
+    function onPlayerCheckboxChange(name, checked) {
+        if (checked) selectedPlayers.add(name);
+        else selectedPlayers.delete(name);
+        updatePlayerCount();
+        fetchOverviewData();
+    }
+
+    function updatePlayerCount() {
+        const badge = document.getElementById('playerCount');
+        badge.textContent = selectedPlayers.size + '/' + allPlayerNames.length;
+    }
+
+    function renderPlayerCheckboxes() {
+        const container = document.getElementById('playerCheckboxes');
+        container.innerHTML = '';
+        allPlayerNames.forEach(name => {
+            const label = document.createElement('label');
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.checked = selectedPlayers.has(name);
+            cb.addEventListener('change', () => onPlayerCheckboxChange(name, cb.checked));
+            label.appendChild(cb);
+            label.appendChild(document.createTextNode(name));
+            container.appendChild(label);
+        });
+        updatePlayerCount();
+    }
+
+    // --- Sort controls ---
+    document.getElementById('sortBySelect').addEventListener('change', function() {
+        currentSortBy = this.value;
+        fetchOverviewData();
+    });
+
+    document.getElementById('sortDirBtn').addEventListener('click', function() {
+        currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+        const icon = document.getElementById('sortDirIcon');
+        icon.className = currentSortDir === 'asc' ? 'fas fa-sort-amount-up' : 'fas fa-sort-amount-down';
+        fetchOverviewData();
+    });
+
+    // Clickable column headers
+    document.querySelectorAll('th.sortable').forEach(th => {
+        th.addEventListener('click', () => {
+            const col = th.dataset.col;
+            if (currentSortBy === col) {
+                currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortBy = col;
+                currentSortDir = 'asc';
+            }
+            document.getElementById('sortBySelect').value = currentSortBy;
+            const icon = document.getElementById('sortDirIcon');
+            icon.className = currentSortDir === 'asc' ? 'fas fa-sort-amount-up' : 'fas fa-sort-amount-down';
+            fetchOverviewData();
+        });
+    });
+
+    function updateSortIndicators() {
+        document.querySelectorAll('.sort-indicator').forEach(el => { el.textContent = ''; });
+        const ind = document.getElementById('ind-' + currentSortBy);
+        if (ind) ind.textContent = currentSortDir === 'asc' ? ' ▲' : ' ▼';
+    }
+
+    // --- Fetch & render data ---
+    function fetchOverviewData() {
+        updateSortIndicators();
+        let url = '/api/player-overview' + getTeamParams();
+        url += '&sort_by=' + encodeURIComponent(currentSortBy);
+        url += '&sort_dir=' + encodeURIComponent(currentSortDir);
+
+        // Only send player filter if not all selected
+        if (selectedPlayers.size > 0 && selectedPlayers.size < allPlayerNames.length) {
+            url += '&players=' + encodeURIComponent([...selectedPlayers].join(','));
+        } else if (selectedPlayers.size === 0) {
+            renderEmptyTable('No players selected');
+            return;
+        }
+
+        const tbody = document.getElementById('overviewTableBody');
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted"><div class="spinner-border spinner-border-sm" role="status"></div> Loading...</td></tr>';
+
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                if (data.length === 0) {
+                    renderEmptyTable('No data available');
+                    return;
+                }
+                tbody.innerHTML = '';
+                data.forEach(p => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML =
+                        '<td>' + p.player_name + '</td>' +
+                        '<td class="text-end">' + p.games_played + '</td>' +
+                        '<td class="text-end">' + p.total_minutes + '</td>' +
+                        '<td class="text-end">' + p.total_goals + '</td>' +
+                        '<td class="text-end">' + p.avg_minutes_per_game + '</td>' +
+                        '<td class="text-end">' + p.avg_goals_per_game + '</td>';
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(err => {
+                console.error('Error fetching player overview:', err);
+                renderEmptyTable('Error loading data');
+            });
+    }
+
+    function renderEmptyTable(msg) {
+        const tbody = document.getElementById('overviewTableBody');
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">' + msg + '</td></tr>';
+    }
+
+    // --- Init: load player names, then load data ---
+    fetch('/api/player-names' + getTeamParams())
+        .then(r => r.json())
+        .then(names => {
+            allPlayerNames = names;
+            selectedPlayers = new Set(names);
+            renderPlayerCheckboxes();
+            fetchOverviewData();
+        })
+        .catch(err => {
+            console.error('Error fetching player names:', err);
+            fetchOverviewData();
+        });
+</script>
+{% endblock %}
