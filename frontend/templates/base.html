@@ -12,7 +12,7 @@
     <!-- Top Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container-fluid">
-            <span class="navbar-brand mb-0 h1">ÖFB Stats</span>
+            <span class="navbar-brand mb-0 h1">ÖFB Stats<span id="navbar-club-name" class="fw-normal fs-6 ms-2 opacity-75"></span></span>
             <div class="navbar-nav ms-auto">
                 {% if current_user %}
                     <span class="navbar-text me-3">{{ current_user.name }} ({{ current_user.email }})</span>
@@ -245,6 +245,11 @@
             const cur = seasons.find(s => s.age_group === team && String(s.season_year) === String(year));
             const dateStr = cur ? ' (' + cur.date_from + ' → ' + cur.date_to + ')' : '';
             const clubStr = clubObj ? clubObj.name + ' &middot; ' : '';
+
+            // Update navbar with club name
+            const navbarClub = document.getElementById('navbar-club-name');
+            if (navbarClub && clubObj) navbarClub.textContent = '· ' + clubObj.name;
+
             document.querySelectorAll('.team-season-info').forEach(el => {
                 el.innerHTML = '<i class="fas fa-filter me-1"></i> <strong>' + clubStr + '</strong>'
                     + '<strong>' + team + '</strong> &middot; Season <strong>' + year + '</strong>' + dateStr;
