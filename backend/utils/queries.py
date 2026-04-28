@@ -2,8 +2,21 @@ import sqlite3
 from datetime import datetime
 
 
-def get_all_seasons(db_path='ofb_stats.db'):
-    """Return all valid season combos from the seasons table."""
+def get_all_clubs(db_path='data/club-stats.db'):
+    """Return all clubs from the clubs table."""
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, name, short_name FROM clubs ORDER BY id ASC')
+        results = cursor.fetchall()
+        conn.close()
+        return [{'id': r[0], 'name': r[1], 'short_name': r[2]} for r in results]
+    except Exception as e:
+        print(f"Error fetching clubs: {e}")
+        return []
+
+
+def get_all_seasons(db_path='data/club-stats.db'):
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -42,7 +55,7 @@ def get_season_dates(db_path, team, year):
         return None, None
 
 
-def get_player_minutes(db_path='ofb_stats.db', team="U13", date_from='2025-08-29', date_to='2026-06-08'):
+def get_player_minutes(db_path='data/club-stats.db', team="U13", date_from='2025-08-29', date_to='2026-06-08', club_id=1):
     """Get total minutes played per player."""
     try:
         conn = sqlite3.connect(db_path)
@@ -52,13 +65,14 @@ def get_player_minutes(db_path='ofb_stats.db', team="U13", date_from='2025-08-29
                 p.player_name,
                 SUM(g.minutes_played) as total_minutes
             FROM players p
-            LEFT JOIN games g ON p.player_id = g.player_id
+            LEFT JOIN games g ON p.player_id = g.player_id AND g.club_id = p.club_id
             WHERE 
                 g.game_date BETWEEN ? AND ?
                 AND g.age_group = ? AND p.team = ?
+                AND p.club_id = ? AND g.club_id = ?
             GROUP BY p.player_id, p.player_name
             ORDER BY total_minutes DESC
-        ''', (date_from, date_to, team, team))
+        ''', (date_from, date_to, team, team, club_id, club_id))
         results = cursor.fetchall()
         conn.close()
         player_names = [row[0] for row in results]
@@ -69,7 +83,7 @@ def get_player_minutes(db_path='ofb_stats.db', team="U13", date_from='2025-08-29
         return {'labels': [], 'data': []}
 
 
-def get_player_goals(db_path='ofb_stats.db', team="U13", date_from='2025-08-29', date_to='2026-06-08'):
+def get_player_goals(db_path='data/club-stats.db', team="U13", date_from='2025-08-29', date_to='2026-06-08', club_id=1):
     """Get total goals scored per player."""
     try:
         conn = sqlite3.connect(db_path)
@@ -79,14 +93,15 @@ def get_player_goals(db_path='ofb_stats.db', team="U13", date_from='2025-08-29',
                 p.player_name,
                 SUM(g.goals) as total_goals
             FROM players p
-            LEFT JOIN games g ON p.player_id = g.player_id
+            LEFT JOIN games g ON p.player_id = g.player_id AND g.club_id = p.club_id
             WHERE 
                 g.game_date BETWEEN ? AND ?
                 AND g.age_group = ? AND p.team = ?
+                AND p.club_id = ? AND g.club_id = ?
             GROUP BY p.player_id, p.player_name
             HAVING SUM(g.goals) > 0
             ORDER BY total_goals DESC
-        ''', (date_from, date_to, team, team))
+        ''', (date_from, date_to, team, team, club_id, club_id))
         results = cursor.fetchall()
         conn.close()
         player_names = [row[0] for row in results]
@@ -97,7 +112,7 @@ def get_player_goals(db_path='ofb_stats.db', team="U13", date_from='2025-08-29',
         return {'labels': [], 'data': []}
 
 
-def get_player_efficiency(db_path='ofb_stats.db', team="U13", date_from='2025-08-29', date_to='2026-06-08'):
+def get_player_efficiency(db_path='data/club-stats.db', team="U13", date_from='2025-08-29', date_to='2026-06-08', club_id=1):
     """Get player efficiency stats aggregated across all games."""
     try:
         conn = sqlite3.connect(db_path)
@@ -113,10 +128,11 @@ def get_player_efficiency(db_path='ofb_stats.db', team="U13", date_from='2025-08
                 ROUND(CAST(SUM(g.goals) AS FLOAT) / COUNT(DISTINCT g.id), 2) as goals_per_game
             FROM 
                 games g
-                JOIN players p ON g.player_id = p.player_id
+                JOIN players p ON g.player_id = p.player_id AND g.club_id = p.club_id
             WHERE 
                 g.game_date BETWEEN ? AND ?
                 AND g.age_group = ?
+                AND g.club_id = ?
                 AND (g.goals > 0 OR g.minutes_played > 0)
             GROUP BY 
                 p.player_id, p.player_name
@@ -126,7 +142,7 @@ def get_player_efficiency(db_path='ofb_stats.db', team="U13", date_from='2025-08
             ORDER BY 
                 goals_per_90_minutes DESC,
                 minutes_per_goal ASC
-        ''', (date_from, date_to, team))
+        ''', (date_from, date_to, team, club_id))
         results = cursor.fetchall()
         conn.close()
         players = []
@@ -146,7 +162,7 @@ def get_player_efficiency(db_path='ofb_stats.db', team="U13", date_from='2025-08
         return []
 
 
-def get_minutes_matrix(db_path='ofb_stats.db', team="U13", date_from='2025-08-29', date_to='2026-06-08'):
+def get_minutes_matrix(db_path='data/club-stats.db', team="U13", date_from='2025-08-29', date_to='2026-06-08', club_id=1):
     """
     Returns a matrix of all games (x-axis) and all players (y-axis),
     with each cell showing the minutes played.
@@ -160,18 +176,19 @@ def get_minutes_matrix(db_path='ofb_stats.db', team="U13", date_from='2025-08-29
             FROM games
             WHERE game_date BETWEEN ? AND ?
                 AND age_group = ?
+                AND club_id = ?
             GROUP BY game_date, competition, home_team, away_team
             ORDER BY game_date ASC, id ASC
-        ''', (date_from, date_to, team))
+        ''', (date_from, date_to, team, club_id))
         games = cursor.fetchall()
 
         cursor.execute('''
             SELECT player_id, player_name FROM players
-            WHERE team = ? AND season_year = (
+            WHERE team = ? AND club_id = ? AND season_year = (
                 SELECT season_year FROM seasons WHERE age_group = ? AND date_from = ? LIMIT 1
             )
             ORDER BY player_name ASC
-        ''', (team, team, date_from))
+        ''', (team, club_id, team, date_from))
         players = cursor.fetchall()
         player_ids = [row[0] for row in players]
 
@@ -188,7 +205,8 @@ def get_minutes_matrix(db_path='ofb_stats.db', team="U13", date_from='2025-08-29
                 cursor.execute('''
                     SELECT SUM(minutes_played) FROM games
                     WHERE player_id=? AND game_date=? AND competition=? AND home_team=? AND away_team=?
-                ''', (pid, game_date, competition, home_team, away_team))
+                    AND club_id=?
+                ''', (pid, game_date, competition, home_team, away_team, club_id))
                 res = cursor.fetchone()
                 matrix[pid][gid] = res[0] if res and res[0] is not None else 0
 
@@ -199,8 +217,9 @@ def get_minutes_matrix(db_path='ofb_stats.db', team="U13", date_from='2025-08-29
             cursor.execute('''
                 SELECT result, COUNT(*) as cnt FROM games
                 WHERE game_date=? AND competition=? AND home_team=? AND away_team=?
+                AND club_id=?
                 GROUP BY result ORDER BY cnt DESC LIMIT 1
-            ''', (date, competition, home_team, away_team))
+            ''', (date, competition, home_team, away_team, club_id))
             res_row = cursor.fetchone()
             result = res_row[0] if res_row and res_row[0] is not None else ''
             games_obj.append({
@@ -215,7 +234,7 @@ def get_minutes_matrix(db_path='ofb_stats.db', team="U13", date_from='2025-08-29
         return {'games': [], 'players': [], 'matrix': []}
 
 
-def get_goal_efficiency_per_game(db_path='ofb_stats.db', team="U13", date_from='2025-08-29', date_to='2026-06-08'):
+def get_goal_efficiency_per_game(db_path='data/club-stats.db', team="U13", date_from='2025-08-29', date_to='2026-06-08', club_id=1):
     """Get goal efficiency per individual game, sorted by best efficiency first."""
     try:
         conn = sqlite3.connect(db_path)
@@ -233,17 +252,18 @@ def get_goal_efficiency_per_game(db_path='ofb_stats.db', team="U13", date_from='
                 ROUND(CAST(g.minutes_played AS FLOAT) / g.goals, 2) as minutes_per_goal
             FROM 
                 games g
-                JOIN players p ON g.player_id = p.player_id
+                JOIN players p ON g.player_id = p.player_id AND g.club_id = p.club_id
             WHERE 
                 g.game_date BETWEEN ? AND ?
                 AND g.age_group = ?
+                AND g.club_id = ?
                 AND g.goals > 0
                 AND g.minutes_played > 0
             ORDER BY 
                 goals_per_90_minutes DESC,
                 minutes_per_goal ASC,
                 g.game_date DESC
-        ''', (date_from, date_to, team))
+        ''', (date_from, date_to, team, club_id))
         results = cursor.fetchall()
         conn.close()
         games = []
@@ -265,8 +285,8 @@ def get_goal_efficiency_per_game(db_path='ofb_stats.db', team="U13", date_from='
         return []
 
 
-def get_player_overview(db_path='ofb_stats.db', team="U13", date_from='2025-08-29', date_to='2026-06-08',
-                       players=None, sort_by='player_name', sort_dir='asc'):
+def get_player_overview(db_path='data/club-stats.db', team="U13", date_from='2025-08-29', date_to='2026-06-08',
+                       players=None, sort_by='player_name', sort_dir='asc', club_id=1):
     """Get per-player overview: games, minutes, goals, avg minutes/game, avg goals/game."""
     VALID_SORT_COLS = {
         'player_name': 'p.player_name',
@@ -292,12 +312,13 @@ def get_player_overview(db_path='ofb_stats.db', team="U13", date_from='2025-08-2
                 ROUND(CAST(SUM(g.minutes_played) AS FLOAT) / COUNT(*), 1) AS avg_minutes_per_game,
                 ROUND(CAST(COALESCE(SUM(g.goals), 0) AS FLOAT) / COUNT(*), 2) AS avg_goals_per_game
             FROM players p
-            JOIN games g ON p.player_id = g.player_id
+            JOIN games g ON p.player_id = g.player_id AND g.club_id = p.club_id
             WHERE g.game_date BETWEEN ? AND ?
                 AND g.age_group = ? AND p.team = ?
+                AND p.club_id = ? AND g.club_id = ?
                 AND g.minutes_played > 0
         '''
-        params = [date_from, date_to, team, team]
+        params = [date_from, date_to, team, team, club_id, club_id]
 
         if players:
             placeholders = ','.join('?' for _ in players)
@@ -329,7 +350,7 @@ def get_player_overview(db_path='ofb_stats.db', team="U13", date_from='2025-08-2
         return []
 
 
-def get_all_player_names(db_path='ofb_stats.db', team="U13", date_from='2025-08-29', date_to='2026-06-08'):
+def get_all_player_names(db_path='data/club-stats.db', team="U13", date_from='2025-08-29', date_to='2026-06-08', club_id=1):
     """Return sorted list of player names that have game data in the given season."""
     try:
         conn = sqlite3.connect(db_path)
@@ -337,12 +358,13 @@ def get_all_player_names(db_path='ofb_stats.db', team="U13", date_from='2025-08-
         cursor.execute('''
             SELECT DISTINCT p.player_name
             FROM players p
-            JOIN games g ON p.player_id = g.player_id
+            JOIN games g ON p.player_id = g.player_id AND g.club_id = p.club_id
             WHERE g.game_date BETWEEN ? AND ?
                 AND g.age_group = ? AND p.team = ?
+                AND p.club_id = ? AND g.club_id = ?
                 AND g.minutes_played > 0
             ORDER BY p.player_name ASC
-        ''', (date_from, date_to, team, team))
+        ''', (date_from, date_to, team, team, club_id, club_id))
         results = cursor.fetchall()
         conn.close()
         return [r[0] for r in results]
@@ -351,7 +373,7 @@ def get_all_player_names(db_path='ofb_stats.db', team="U13", date_from='2025-08-
         return []
 
 
-def get_games_played_per_player(db_path='ofb_stats.db', team="U13", date_from='2025-08-29', date_to='2026-06-08'):
+def get_games_played_per_player(db_path='data/club-stats.db', team="U13", date_from='2025-08-29', date_to='2026-06-08', club_id=1):
     """Get the number of games played per player."""
     try:
         conn = sqlite3.connect(db_path)
@@ -359,14 +381,15 @@ def get_games_played_per_player(db_path='ofb_stats.db', team="U13", date_from='2
         cursor.execute('''
             SELECT p.player_name, COUNT(*) AS num_games
             FROM players p
-            JOIN games g ON p.player_id = g.player_id
+            JOIN games g ON p.player_id = g.player_id AND g.club_id = p.club_id
             WHERE 
                 g.game_date BETWEEN ? AND ?
                 AND g.age_group = ? AND p.team = ?
+                AND p.club_id = ? AND g.club_id = ?
                 AND g.minutes_played > 0
             GROUP BY p.player_id, p.player_name
             ORDER BY num_games DESC
-        ''', (date_from, date_to, team, team))
+        ''', (date_from, date_to, team, team, club_id, club_id))
         results = cursor.fetchall()
         conn.close()
         players = []

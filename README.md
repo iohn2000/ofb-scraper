@@ -16,7 +16,7 @@ Repair path (works in ~90% of cases)
 ✅ Method 1: .recover (BEST)
 This is the official SQLite recovery mechanism.
 
-sqlite3 ofb_stats.db <<EOF
+sqlite3 club-stats.db <<EOF
 .mode insert
 #.output dump.sql
 .recover
@@ -29,7 +29,7 @@ sqlite3 fixed.db < dump.sql
 
 ✅ Method 2: .dump (older SQLite)
 If .recover is not available:
-sqlite3 ofb_stats.db .dump > dump.sql
+sqlite3 club-stats.db .dump > dump.sql
 sqlite3 fixed.db < dump.sql
 
 ⚠️ This may fail earlier than .recover, but still worth trying.

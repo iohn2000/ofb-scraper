@@ -11,7 +11,7 @@ ofb-scraper/                           ← Project root
 ├── .dockerignore                       ← Files to exclude from Docker build
 ├── requirements.txt                    ← Python dependencies (updated)
 │
-├── ofb_stats.db                        ← SQLite database (read-only in Docker)
+├── club-stats.db                        ← SQLite database (read-only in Docker)
 ├── scrape_two_step.py                  ← Original scraper (standalone)
 │
 ├── backend/                            ← Backend application (Flask)
@@ -52,7 +52,7 @@ ofb-scraper/                           ← Project root
   - `/api/goals` - JSON API for goals data
   - `/api/efficiency` - JSON API for efficiency data
 
-- **backend/utils/queries.py** - Database query functions that fetch data from `ofb_stats.db`:
+- **backend/utils/queries.py** - Database query functions that fetch data from `club-stats.db`:
   - `get_player_minutes()` - Aggregates total minutes per player
   - `get_player_goals()` - Aggregates total goals per player
   - `get_player_efficiency()` - Calculates efficiency metrics per player
@@ -93,7 +93,7 @@ ofb-scraper/                           ← Project root
 3. Browser renders HTML with Chart.js canvas
 4. JavaScript code in template runs fetch('/api/minutes')
 5. Flask route /api/minutes calls queries.py function
-6. Query function connects to ofb_stats.db and executes SQL
+6. Query function connects to club-stats.db and executes SQL
 7. Results returned as JSON to browser
 8. Chart.js renders data in canvas element
 9. User sees interactive chart on responsive layout
@@ -105,7 +105,7 @@ Volume Mounts in docker-compose.yml enable:
 - `/backend:/app/backend` - Python file changes trigger Flask auto-reload
 - `/frontend/templates:/app/frontend/templates` - HTML changes visible on refresh
 - `/frontend/static:/app/frontend/static` - CSS/JS changes visible on refresh
-- `/ofb_stats.db:/app/ofb_stats.db:ro` - Database file (read-only)
+- `/club-stats.db:/app/club-stats.db:ro` - Database file (read-only)
 
 Flask runs with `FLASK_ENV=development` which enables:
 - Auto-reload on Python file changes
@@ -124,14 +124,14 @@ Flask runs with `FLASK_ENV=development` which enables:
 
 - **Backend**: Python 3.11 + Flask 2.3.0 + Werkzeug
 - **Frontend**: HTML5 + Bootstrap 5.3.0 + Chart.js 4.3.0
-- **Database**: SQLite (ofb_stats.db)
+- **Database**: SQLite (club-stats.db)
 - **Container**: Docker + Docker Compose
 - **Templating**: Jinja2 (Flask built-in)
 - **HTTP**: Standard HTTP/JSON APIs
 
 ## Data Sources
 
-All visualization data comes from `ofb_stats.db` which contains:
+All visualization data comes from `club-stats.db` which contains:
 - **players** table: player_id, player_name, team, season_year
 - **games** table: game statistics per player (minutes_played, goals, competition, etc.)
 

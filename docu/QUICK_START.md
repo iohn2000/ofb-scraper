@@ -4,7 +4,7 @@
 Before starting, ensure:
 1. Docker Desktop is installed and running
 2. You're in the `c:\dev\ofb-scraper` directory
-3. `ofb_stats.db` exists (the database with player stats)
+3. `club-stats.db` exists (the database with player stats)
 
 ## Step 1: Start Docker Container
 
@@ -100,8 +100,8 @@ docker-compose up --build
 
 ### Database File Not Found
 ```powershell
-# Check if ofb_stats.db exists
-Test-Path ofb_stats.db
+# Check if club-stats.db exists
+Test-Path club-stats.db
 
 # If missing, create from scraper (if available)
 python scrape_two_step.py
@@ -158,7 +158,7 @@ docker-compose exec web bash
 | Backend code | `backend/app.py`, `backend/utils/queries.py` |
 | HTML pages | `frontend/templates/*.html` |
 | Styling | `frontend/static/css/style.css` |
-| Database | `ofb_stats.db` |
+| Database | `club-stats.db` |
 | Config | `docker-compose.yml` |
 
 ## Visual Site Layout
