@@ -4,3 +4,4 @@
 *.pyd
 .pytest_cache/
 .env
+.DS_Store

@@ -62,102 +62,24 @@
 
 {% block scripts %}
 <script>
-    // Custom plugin to draw game count values next to each bar
-    const dataLabelsPlugin = {
-        id: 'dataLabels',
-        afterDatasetsDraw(chart) {
-            const { ctx, chartArea: { right } } = chart;
-            chart.data.datasets.forEach((dataset, datasetIndex) => {
-                const meta = chart.getDatasetMeta(datasetIndex);
-                meta.data.forEach((datapoint, index) => {
-                    const value = dataset.data[index];
-                    if (value === null || value === undefined) return;
-
-                    const { x, y } = datapoint.getProps(['x', 'y']);
-                    ctx.font = '11px Arial';
-                    const textWidth = ctx.measureText(value).width;
-                    const padding = 6;
-
-                    if (x + padding + textWidth < right - 4) {
-                        ctx.fillStyle = '#333';
-                        ctx.textAlign = 'left';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillText(value, x + padding, y);
-                    } else {
-                        ctx.fillStyle = '#fff';
-                        ctx.textAlign = 'right';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillText(value, x - padding, y);
-                    }
-                });
-            });
-        }
-    };
-
-    Chart.register(dataLabelsPlugin);
-
     fetch('/api/games-played' + getTeamParams())
         .then(response => response.json())
         .then(data => {
             const labels = data.map(p => p.player_name);
             const values = data.map(p => p.num_games);
 
-            // --- Chart ---
-            const chartHeight = Math.max(300, labels.length * 32 + 80);
-            const chartInner = document.getElementById('gamesChartInner');
-            chartInner.style.height = chartHeight + 'px';
-
-            const ctx = document.getElementById('gamesChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Games Played',
-                        data: values,
-                        backgroundColor: 'rgba(23, 162, 184, 0.8)',
-                        borderColor: 'rgba(23, 162, 184, 1)',
-                        borderWidth: 1,
-                        borderRadius: 3,
-                        barPercentage: 0.75,
-                        categoryPercentage: 0.85
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    layout: {
-                        padding: { right: 50 }
-                    },
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        x: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Games',
-                                font: { size: 11 }
-                            },
-                            ticks: {
-                                font: { size: 11 },
-                                precision: 0
-                            }
-                        },
-                        y: {
-                            ticks: {
-                                font: { size: 12 },
-                                autoSkip: false,
-                                maxRotation: 0
-                            }
-                        }
-                    }
-                }
+            initHorizontalBarChart({
+                canvasId: 'gamesChart',
+                containerId: 'gamesChartInner',
+                labels: labels,
+                data: values,
+                datasetLabel: 'Games Played',
+                color: 'rgba(23, 162, 184, 0.8)',
+                borderColor: 'rgba(23, 162, 184, 1)',
+                xAxisTitle: 'Games',
+                integerTicks: true
             });
 
-            // --- Table ---
             const tbody = document.getElementById('gamesPlayedTableBody');
             if (data.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">No data available</td></tr>';
