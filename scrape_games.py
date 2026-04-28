@@ -24,65 +24,81 @@ db_write_lock = threading.Lock()
 
 def init_database(db_path):
     """
-    Initialize the SQLite database with tables for players and games
+    Initialize the SQLite database with tables for clubs, players, games and seasons.
     """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS clubs (
+            id         INTEGER PRIMARY KEY,
+            name       TEXT NOT NULL,
+            short_name TEXT NOT NULL,
+            UNIQUE(name)
+        )
+    ''')
+
     # Create players table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS players (
             id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            club_id      INTEGER NOT NULL REFERENCES clubs(id),
             player_id    INTEGER NOT NULL,
             player_name  TEXT NOT NULL,
             team         TEXT,
             season_year  INTEGER,
             last_updated TEXT DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(player_id, team, season_year)
+            UNIQUE(player_id, team, season_year, club_id)
         )
     ''')
-    
+
     # Create games table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS games (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            player_id INTEGER NOT NULL,
-            game_date TEXT,
-            competition TEXT,
-            age_group TEXT,
-            round INTEGER,
-            home_team TEXT,
-            away_team TEXT,
-            result TEXT,
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            club_id        INTEGER NOT NULL REFERENCES clubs(id),
+            player_id      INTEGER NOT NULL,
+            game_date      TEXT,
+            competition    TEXT,
+            age_group      TEXT,
+            round          INTEGER,
+            home_team      TEXT,
+            away_team      TEXT,
+            result         TEXT,
             minutes_played INTEGER,
-            goals INTEGER,
-            location TEXT,
-            match_link TEXT,
+            goals          INTEGER,
+            location       TEXT,
+            match_link     TEXT,
             game_timestamp INTEGER NOT NULL,
-            last_updated TEXT DEFAULT CURRENT_TIMESTAMP,
+            last_updated   TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (player_id) REFERENCES players (player_id),
-            UNIQUE(player_id, game_timestamp)
+            UNIQUE(player_id, game_timestamp, club_id)
         )
     ''')
-    
-    # Create index for faster queries
+
+    # Create indexes for faster queries
     cursor.execute('''
-        CREATE INDEX IF NOT EXISTS idx_player_games 
+        CREATE INDEX IF NOT EXISTS idx_player_games
         ON games(player_id, game_date)
+    ''')
+
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_games_club
+        ON games(club_id, age_group, game_date)
     ''')
 
     # Create seasons table for date ranges per team/year
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS seasons (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            age_group TEXT NOT NULL,
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            age_group   TEXT NOT NULL,
             season_year INTEGER NOT NULL,
-            date_from TEXT NOT NULL,
-            date_to TEXT NOT NULL,
+            date_from   TEXT NOT NULL,
+            date_to     TEXT NOT NULL,
             UNIQUE(age_group, season_year)
         )
     ''')
-    
+
     conn.commit()
     conn.close()
     print(f"✓ Database initialized: {db_path}")
@@ -113,7 +129,7 @@ def seed_seasons(db_path):
     print(f"✓ Seasons seeded: {len(known_seasons)} entries")
 
 
-def save_player_to_db(player_id, player_name, team, year, db_path):
+def save_player_to_db(player_id, player_name, team, year, db_path, club_id=1):
     """
     Save or update player information in the database
     """
@@ -122,18 +138,18 @@ def save_player_to_db(player_id, player_name, team, year, db_path):
     cursor = conn.cursor()
     
     cursor.execute('''
-        INSERT INTO players (player_id, player_name, team, season_year, last_updated)
-        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-        ON CONFLICT(player_id, team, season_year) DO UPDATE SET
+        INSERT INTO players (club_id, player_id, player_name, team, season_year, last_updated)
+        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(player_id, team, season_year, club_id) DO UPDATE SET
             player_name  = excluded.player_name,
             last_updated = CURRENT_TIMESTAMP
-    ''', (player_id, player_name, team, year))   
+    ''', (club_id, player_id, player_name, team, year))   
     
     conn.commit()
     conn.close()
 
 
-def save_games_to_db(player_id, games_data, db_path='ofb_stats.db'):
+def save_games_to_db(player_id, games_data, db_path='data/club-stats.db', club_id=1):
     """
     Save or update game statistics in the database
     Returns number of new games added and updated
@@ -154,10 +170,10 @@ def save_games_to_db(player_id, games_data, db_path='ofb_stats.db'):
         else:
             game_date = None
         
-        # Check if game already exists for this player
+        # Check if game already exists for this player and club
         cursor.execute(
-            'SELECT id FROM games WHERE player_id = ? AND game_timestamp = ?', 
-            (player_id, timestamp)
+            'SELECT id FROM games WHERE player_id = ? AND game_timestamp = ? AND club_id = ?',
+            (player_id, timestamp, club_id)
         )
         existing = cursor.fetchone()
         
@@ -183,7 +199,7 @@ def save_games_to_db(player_id, games_data, db_path='ofb_stats.db'):
                     location = ?,
                     match_link = ?,
                     last_updated = CURRENT_TIMESTAMP
-                WHERE player_id = ? AND game_timestamp = ?
+                WHERE player_id = ? AND game_timestamp = ? AND club_id = ?
             ''', (
                 game.get('bewerb', ''),
                 game.get('ageGroup', ''),
@@ -196,18 +212,20 @@ def save_games_to_db(player_id, games_data, db_path='ofb_stats.db'):
                 game.get('spielortBezeichnung', ''),
                 game.get('actionLink', ''),
                 player_id,
-                timestamp
+                timestamp,
+                club_id
             ))
             updated_games += 1
         else:
             # Insert new game
             cursor.execute('''
                 INSERT INTO games (
-                    player_id, game_date, competition, age_group, round, 
-                    home_team, away_team, result, minutes_played, 
+                    club_id, player_id, game_date, competition, age_group, round,
+                    home_team, away_team, result, minutes_played,
                     goals, location, match_link, game_timestamp
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
+                club_id,
                 player_id,
                 game_date,
                 game.get('bewerb', ''),
@@ -230,7 +248,7 @@ def save_games_to_db(player_id, games_data, db_path='ofb_stats.db'):
     return new_games, updated_games
 
 
-def generate_minutes_chart(db_path='ofb_stats.db', output_file='player_minutes.png', team="U13"):
+def generate_minutes_chart(db_path='data/club-stats.db', output_file='player_minutes.png', team="U13"):
     """
     Generate a bar chart showing total minutes played for each player
     Saves the chart as a PNG file
@@ -277,65 +295,6 @@ def generate_minutes_chart(db_path='ofb_stats.db', output_file='player_minutes.p
     plt.ylabel('Player', fontsize=12, fontweight='bold')
     plt.xlabel('Total Minutes Played', fontsize=12, fontweight='bold')
     plt.title('ÖFB '' + team+ '' - Total Minutes Played by Player', fontsize=14, fontweight='bold', pad=20)
-    plt.grid(axis='x', alpha=0.3, linestyle='--')
-    plt.tight_layout()
-    
-    # Save the figure
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
-    plt.close()
-    
-    print(f"✓ Chart saved to: {output_file}")
-    return output_file
-
-
-def generate_goals_chart(db_path='ofb_stats.db', output_file='player_goals.png', team="U13"):
-    """
-    Generate a bar chart showing total goals scored for each player
-    Saves the chart as a PNG file
-    """
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    
-    # Query to get total goals per player
-    cursor.execute('''
-        SELECT 
-            p.player_name,
-            SUM(g.goals) as total_goals
-        FROM players p
-        LEFT JOIN games g ON p.player_id = g.player_id
-        WHERE 
-            g.game_date BETWEEN '2025-08-29' and '2026-06-08'
-            AND p.team = ?       
-        GROUP BY p.player_id, p.player_name
-        HAVING SUM(g.goals) > 0
-        ORDER BY total_goals DESC
-    ''', (team,))
-    
-    results = cursor.fetchall()
-    conn.close()
-    
-    if not results:
-        print("No data found in database to generate chart")
-        return None
-    
-    # Separate player names and goals
-    player_names = [row[0] for row in results]
-    total_goals = [row[1] if row[1] else 0 for row in results]
-    
-    # Create horizontal bar chart
-    plt.figure(figsize=(10, 8))
-    bars = plt.barh(player_names, total_goals, color='forestgreen', edgecolor='darkgreen', linewidth=1.5)
-    
-    # Add value labels at the end of bars
-    for bar, goals in zip(bars, total_goals):
-        width = bar.get_width()
-        plt.text(width, bar.get_y() + bar.get_height()/2.,
-                f' {int(goals)}',
-                ha='left', va='center', fontsize=10, fontweight='bold')
-    
-    plt.ylabel('Player', fontsize=12, fontweight='bold')
-    plt.xlabel('Total Goals Scored', fontsize=12, fontweight='bold')
-    plt.title('ÖFB ''+ team + '' - Total Goals Scored by Player', fontsize=14, fontweight='bold', pad=20)
     plt.grid(axis='x', alpha=0.3, linestyle='--')
     plt.tight_layout()
     
@@ -616,7 +575,7 @@ def scrape_player_stats(player_id, team, year=2026, skip_trigger=False):
     return {'spieleAlle': games_data}
 
 
-def save_player_stats_to_db(player_id, player_name, team, year, data, db_path):
+def save_player_stats_to_db(player_id, player_name, team, year, data, db_path, club_id=1):
     """
     Save player statistics to database
     Returns tuple: (new_games_count, updated_games_count)
@@ -627,10 +586,10 @@ def save_player_stats_to_db(player_id, player_name, team, year, data, db_path):
     games = data['spieleAlle']
     
     # Save player to database
-    save_player_to_db(player_id, player_name, team, year, db_path)
+    save_player_to_db(player_id, player_name, team, year, db_path, club_id)
     
     # Save games to database
-    new_games, updated_games = save_games_to_db(player_id, games, db_path)
+    new_games, updated_games = save_games_to_db(player_id, games, db_path, club_id)
     
     return new_games, updated_games
 
@@ -672,7 +631,7 @@ def print_player_stats(player_id, player_name, team, year=2026, skip_trigger=Fal
 
 
 
-def process_player(player, db_path):
+def process_player(player, db_path, club_id=1):
     """
     Worker function: scrape one player and save to DB.
     Designed to run in a thread pool — each call opens its own Firefox instance.
@@ -697,7 +656,7 @@ def process_player(player, db_path):
         # Serialize DB writes to avoid SQLite "database is locked" errors
         with db_write_lock:
             new_games, updated_games = save_player_stats_to_db(
-                player_id, player_name, team, year, data, db_path
+                player_id, player_name, team, year, data, db_path, club_id
             )
 
         print(f"[{player_name}] ✓ DB: {new_games} new, {updated_games} updated")
@@ -715,7 +674,8 @@ if __name__ == "__main__":
 
    parser = argparse.ArgumentParser(description='ÖFB Player Statistics Scraper')
    parser.add_argument('players_file', default='data/u13-a-2026.json', help='Path to JSON file containing player list (e.g. data/u13-a-2026.json)')
-   parser.add_argument('--db', default='data/ofb_stats.db', help='SQLite database path (default: ofb_stats.db)')
+   parser.add_argument('--db', default='data/club-stats.db', help='SQLite database path (default: data/club-stats.db)')
+   parser.add_argument('--club-id', type=int, default=1, help='Club ID to associate scraped data with (1=Ostbahn XI, 2=SuSa, 3=Fortuna; default: 1)')
    parser.add_argument('--workers', default=3, type=int, help='Number of parallel Firefox instances (default: 3)')
    args = parser.parse_args()
 
@@ -737,13 +697,13 @@ if __name__ == "__main__":
    conn.close()
    init_database(args.db)
    seed_seasons(args.db)
-   print(f"\nStarting parallel scrape with {args.workers} workers...\n")
+   print(f"\nStarting parallel scrape with {args.workers} workers (club_id={args.club_id})...\n")
    print("=" * 80)
 
    results = []
    with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
        futures = {
-           executor.submit(process_player, player, args.db): player['name']
+           executor.submit(process_player, player, args.db, args.club_id): player['name']
            for player in players
        }
        for future in concurrent.futures.as_completed(futures):

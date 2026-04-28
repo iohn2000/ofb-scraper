@@ -15,7 +15,7 @@ A Docker-based web application for visualizing player statistics from the ÖFB U
 
 - Docker Desktop installed and running
 - Windows, Mac, or Linux with PowerShell or Bash terminal access
-- Database file: `ofb_stats.db` (should be in the project root)
+- Database file: `club-stats.db` (should be in the project root)
 
 ## Quick Start
 
@@ -92,7 +92,7 @@ ofb-scraper/
 ├── Dockerfile                          # Docker image definition
 ├── docker-compose.yml                  # Container orchestration
 ├── requirements.txt                    # Python dependencies
-├── ofb_stats.db                        # SQLite database (volume mount)
+├── club-stats.db                        # SQLite database (volume mount)
 ├── backend/
 │   ├── app.py                         # Flask application & routes
 │   ├── utils/
@@ -136,7 +136,7 @@ Test on different devices using Chrome DevTools:
 
 ## Database
 
-The application reads from `ofb_stats.db` (SQLite) which contains:
+The application reads from `club-stats.db` (SQLite) which contains:
 - `players` table: Player information
 - `games` table: Game statistics (minutes played, goals, etc.)
 
@@ -162,9 +162,9 @@ docker-compose up --build
 ```
 
 ### Database not found
-Ensure `ofb_stats.db` exists in the project root directory:
+Ensure `club-stats.db` exists in the project root directory:
 ```bash
-ls -la ofb_stats.db
+ls -la club-stats.db
 ```
 
 ### Charts not loading
