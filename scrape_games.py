@@ -520,40 +520,6 @@ def scrape_from_page(player_id, team, year=2026):
             driver.quit()
         return None
 
-
-def fetch_json_data(player_id, team="U13", year=2026):
-    """
-    Fetch the JSON data
-    """
-    #proxy = "?proxyUrl=http%3A%2F%2Fportale-datenservice%3A8080%2Fdatenservice%2Frest%2Foefb%2Fspielerprofil%2FalleSpiele%2F1397521%2FU13%2F2026"
-    json_url = f"https://www.oefb.at/proxy/oefb3/1469066385635312874_spielerprofil_alleSpiele_{player_id}_{team}_{year}.json?proxyUrl=http%3A%2F%2Fportale-datenservice%3A8080%2Fdatenservice%2Frest%2Foefb%2Fspielerprofil%2FalleSpiele%2F1397521%2FU13%2F2026"
-   
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-        'Accept': 'application/json',
-        'Referer': f'https://www.oefb.at/Profile/Spieler/{player_id}/{team}'
-    }
-    
-    try:
-        response = requests.get(json_url, headers=headers)
-        #response.raise_for_status()
-        
-        data = response.json()
-        #print(f"✓ JSON fetched successfully")
-        return data
-        
-    except requests.exceptions.HTTPError as e:
-        print(f"✗ HTTP Error: {e}")
-        print(f"  Response status: {e.response.status_code}")
-        return None
-    except requests.exceptions.RequestException as e:
-        print(f"✗ Request Error: {e}")
-        return None
-    except json.JSONDecodeError as e:
-        print(f"✗ JSON Decode Error: {e}")
-        return None
-
-
 def scrape_player_stats(player_id, team, year=2026, skip_trigger=False):
     """
     Complete scraping process:
