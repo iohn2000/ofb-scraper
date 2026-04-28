@@ -4,6 +4,8 @@ services:
   web:
     build: .
     container_name: ofb-stats-web
+    env_file:
+      - .env
     ports:
       - "5001:5000"
     volumes:
@@ -18,6 +20,8 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - GUNICORN_WORKERS=4
+      - OAUTHLIB_INSECURE_TRANSPORT=1
+      - OAUTHLIB_RELAX_TOKEN_SCOPE=1
     restart: unless-stopped
     networks:
       - immich-net

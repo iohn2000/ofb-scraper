@@ -9,6 +9,21 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
+    <!-- Top Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">ÖFB Stats</span>
+            <div class="navbar-nav ms-auto">
+                {% if current_user %}
+                    <span class="navbar-text me-3">{{ current_user.name }} ({{ current_user.email }})</span>
+                    <a class="nav-link" href="/logout">Logout</a>
+                {% else %}
+                    <a class="nav-link" href="{{ url_for('google.login') }}">Login with Google</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
     <!-- Mobile Menu Toggle Button (fixed header) -->
     <button class="mobile-menu-toggle d-lg-none" type="button" onclick="toggleMobileMenu()">
         <i class="fas fa-bars"></i>
