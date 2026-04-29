@@ -116,6 +116,9 @@ def seed_clubs(db_path):
         (3, 'Fortuna 05', 'Fortuna'),
         (4, 'FC 1980 Wien', '1980Wien'),
         (5, 'Mannswörth', 'Mannswoerth'),
+        (6, '1210 Wien', '1210Wien'),
+        (7, 'Essling', 'Essling'),
+
     ]
 
     for club_id, name, short_name in clubs:
