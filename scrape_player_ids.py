@@ -140,21 +140,23 @@ def scrape_roster(roster_url: str) -> list[dict]:
 
 #TEAM = "U13"
 #TEAM = "U14"
-TEAM = "U15"
+TEAM = "U13"
 #TEAM = "U16"
 #KADER = "U13-A"
-KADER = "U15"
-VEREIN = "OstbXI"
-ROSTER_URL = "https://vereine.oefb.at/ScOstbahnXi/Mannschaften/Saison-2025-26/" + KADER + "/Kader/"
+KADER = "U13"
+VEREIN = "Mannswoerth"
+#ROSTER_URL = "https://vereine.oefb.at/ScOstbahnXi/Mannschaften/Saison-2025-26/" + KADER + "/Kader/"
 #ROSTER_URL = "https://vereine.oefb.at/PHHFortuna05/Mannschaften/Saison-2025-26/U13-A/Kader/"
 #ROSTER_URL = "https://vereine.oefb.at/FcSusaVienna/Mannschaften/Saison-2025-26/U13-A/Kader/"
+#ROSTER_URL = "https://vereine.oefb.at/Fc1980Wien/Mannschaften/Saison-2025-26/U13/Kader/"
+ROSTER_URL = "https://vereine.oefb.at/scmannswoerth/Mannschaften/Saison-2025-26/U13/Kader/"
 YEAR = 2026
 
 def main():
     players = scrape_roster(ROSTER_URL)
-    with open(f"data/{VEREIN}-{TEAM}-{YEAR}.json", "w", encoding="utf-8") as f:
+    with open(f"data/player-json/{VEREIN}-{TEAM}-{YEAR}.json", "w", encoding="utf-8") as f:
         json.dump(players, f, ensure_ascii=False, indent=4)
-    print(f"\nSaved to: data/{VEREIN}-{TEAM}-{YEAR}.json")
+    print(f"\nSaved to: data/player-json/{VEREIN}-{TEAM}-{YEAR}.json")
 
 
 if __name__ == "__main__":

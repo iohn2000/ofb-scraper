@@ -103,6 +103,33 @@ def init_database(db_path):
     conn.close()
     print(f"✓ Database initialized: {db_path}")
 
+def seed_clubs(db_path):
+    """
+    Seed the clubs table with known club information.
+    """
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    clubs = [
+        (1, 'Ostbahn XI', 'OstbXI'),
+        (2, 'DSG SUSA Vienna', 'SUSA'),
+        (3, 'Fortuna 05', 'Fortuna'),
+        (4, 'FC 1980 Wien', '1980Wien'),
+        (5, 'Mannswörth', 'Mannswoerth'),
+    ]
+
+    for club_id, name, short_name in clubs:
+       cursor.execute("""
+            INSERT INTO clubs (id, name, short_name)
+            VALUES (?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                name = excluded.name,
+                short_name = excluded.short_name
+""", (club_id, name, short_name))
+
+    conn.commit()
+    conn.close()
+    print(f"✓ Clubs seeded: {len(clubs)} entries")
 
 def seed_seasons(db_path):
     """
@@ -663,6 +690,8 @@ if __name__ == "__main__":
    conn.close()
    init_database(args.db)
    seed_seasons(args.db)
+   seed_clubs(args.db)
+
    print(f"\nStarting parallel scrape with {args.workers} workers (club_id={args.club_id})...\n")
    print("=" * 80)
 
