@@ -144,12 +144,14 @@ TEAM = "U13"
 #TEAM = "U16"
 #KADER = "U13-A"
 KADER = "U13"
-VEREIN = "Mannswoerth"
+VEREIN = "Essling"
 #ROSTER_URL = "https://vereine.oefb.at/ScOstbahnXi/Mannschaften/Saison-2025-26/" + KADER + "/Kader/"
 #ROSTER_URL = "https://vereine.oefb.at/PHHFortuna05/Mannschaften/Saison-2025-26/U13-A/Kader/"
 #ROSTER_URL = "https://vereine.oefb.at/FcSusaVienna/Mannschaften/Saison-2025-26/U13-A/Kader/"
 #ROSTER_URL = "https://vereine.oefb.at/Fc1980Wien/Mannschaften/Saison-2025-26/U13/Kader/"
-ROSTER_URL = "https://vereine.oefb.at/scmannswoerth/Mannschaften/Saison-2025-26/U13/Kader/"
+#ROSTER_URL = "https://vereine.oefb.at/scmannswoerth/Mannschaften/Saison-2025-26/U13/Kader/"
+#ROSTER_URL = "https://vereine.oefb.at/1210Wien/Mannschaften/Saison-2025-26/U13-A/Kader/"
+ROSTER_URL = "https://vereine.oefb.at/SvEssling/Mannschaften/Saison-2025-26/U13-A/Kader/"
 YEAR = 2026
 
 def main():
