@@ -7,6 +7,7 @@ from utils.queries import (
     get_all_seasons, get_season_dates, get_player_overview, get_all_player_names,
     get_all_clubs
 )
+from utils.ranking_fetcher import get_ranking, get_available_table_types
 
 api_bp = Blueprint('api', __name__)
 
@@ -100,3 +101,20 @@ def api_player_names():
 def api_minutes_matrix():
     club_id, team, date_from, date_to = _get_filter_params()
     return jsonify(get_minutes_matrix(DB_PATH, team=team, date_from=date_from, date_to=date_to, club_id=club_id))
+
+
+@api_bp.route('/api/ranking')
+@login_required
+def api_ranking():
+    """Fetch B-Liga ranking for specified team and table type."""
+    team = request.args.get('team', 'U13')
+    table_type = request.args.get('table_type', 'NORMAL')
+    result = get_ranking(team=team, table_type=table_type)
+    return jsonify(result)
+
+
+@api_bp.route('/api/ranking/table-types')
+@login_required
+def api_ranking_table_types():
+    """Get available ranking table types."""
+    return jsonify(get_available_table_types())

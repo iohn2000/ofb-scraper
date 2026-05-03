@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4"><span id="pageTitle">U13 Ranking Season 25/26</span></h2>
+    </div>
+</div>
+
+<!-- Table Type Selector -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-primary btn-sm table-type-btn" data-type="NORMAL">Gesamt</button>
+            <button class="btn btn-outline-primary btn-sm table-type-btn" data-type="HEIM">Heim</button>
+            <button class="btn btn-outline-primary btn-sm table-type-btn" data-type="AUSWAERTS">Auswärts</button>
+            <button class="btn btn-outline-primary btn-sm table-type-btn" data-type="HERBST">Herbst</button>
+            <button class="btn btn-outline-primary btn-sm table-type-btn" data-type="FRUEHJAHR">Frühjahr</button>
+        </div>
+    </div>
+</div>
+
+<!-- Loading State -->
+<div id="loadingSpinner" class="text-center d-none">
+    <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Fetching ranking data...</p>
+</div>
+
+<!-- Error State -->
+<div id="errorAlert" class="alert alert-danger d-none" role="alert"></div>
+
+<!-- Ranking Table -->
+<div id="rankingContainer" class="d-none">
+    <div class="row mb-3">
+        <div class="col-12">
+            <h5 class="text-muted"><span id="liganName"></span> – <span id="tableTypeName"></span></h5>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width: 5%">#</th>
+                    <th style="width: 35%">Team</th>
+                    <th style="width: 8%">Played</th>
+                    <th style="width: 8%">Won</th>
+                    <th style="width: 8%">Draw</th>
+                    <th style="width: 8%">Lost</th>
+                    <th style="width: 12%">Goals</th>
+                    <th style="width: 8%">Diff</th>
+                    <th style="width: 8%">Points</th>
+                </tr>
+            </thead>
+            <tbody id="rankingTableBody">
+                <!-- Populated by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/ranking.js') }}"></script>
+{% endblock %}
