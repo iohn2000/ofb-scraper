@@ -48,6 +48,12 @@ def logout():
 @app.route('/')
 @login_required
 def index():
+    return render_template('ranking.html', current_user=get_current_user())
+
+
+@app.route('/minutes-chart')
+@login_required
+def minutes_chart():
     return render_template('minutes_chart.html', current_user=get_current_user())
 
 
@@ -85,6 +91,12 @@ def player_overview():
 @login_required
 def minutes_matrix():
     return render_template('minutes_matrix.html', current_user=get_current_user())
+
+
+@app.route('/ranking')
+@login_required
+def ranking():
+    return render_template('ranking.html', current_user=get_current_user())
 
 
 if __name__ == '__main__':
