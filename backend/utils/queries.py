@@ -1,7 +1,11 @@
+import os
 import sqlite3
 from utils.db import get_connection
 
-DEFAULT_DB = 'data/club-stats.db'
+PREFERRED_DB_PATH = '/app/club-stats.db'
+BACKEND_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_DB = PREFERRED_DB_PATH if os.path.exists(PREFERRED_DB_PATH) else os.path.join(BACKEND_ROOT, 'data', 'club-stats.db')
+USER_DB_PATH = '/app/user-auth.db' if os.path.exists('/app') else os.path.join(BACKEND_ROOT, 'user-auth.db')
 
 
 def get_all_clubs(db_path=DEFAULT_DB):
@@ -276,3 +280,125 @@ def get_games_played_per_player(db_path=DEFAULT_DB, team="U13", date_from='2025-
             ORDER BY num_games DESC
         ''', (date_from, date_to, team, team, club_id, club_id)).fetchall()
     return [dict(r) for r in rows]
+
+
+# User management functions
+import hashlib
+import datetime
+
+def hash_password(password):
+    """Hash a password using SHA-256."""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+def _ensure_user_db(db_path=USER_DB_PATH):
+    """Ensure the user auth database and users table exist."""
+    with get_connection(db_path) as conn:
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                username        TEXT NOT NULL UNIQUE,
+                password_hash   TEXT NOT NULL,
+                is_suspended    INTEGER DEFAULT 0,
+                suspended_until TEXT,
+                created_at      TEXT DEFAULT CURRENT_TIMESTAMP,
+                last_login      TEXT,
+                created_by      TEXT
+            )
+        ''')
+        conn.commit()
+
+
+def create_user(db_path=USER_DB_PATH, username=None, password=None, created_by=None):
+    """Create a new user."""
+    _ensure_user_db(db_path)
+    password_hash = hash_password(password)
+    with get_connection(db_path) as conn:
+        try:
+            conn.execute('''
+                INSERT INTO users (username, password_hash, created_by)
+                VALUES (?, ?, ?)
+            ''', (username, password_hash, created_by))
+            conn.commit()
+            return True
+        except sqlite3.IntegrityError:
+            return False  # Username already exists
+
+def authenticate_user(db_path=USER_DB_PATH, username=None, password=None):
+    """Authenticate a user and return user info if valid."""
+    _ensure_user_db(db_path)
+    password_hash = hash_password(password)
+    with get_connection(db_path) as conn:
+        row = conn.execute('''
+            SELECT id, username, is_suspended, suspended_until, created_at
+            FROM users
+            WHERE username = ? AND password_hash = ?
+        ''', (username, password_hash)).fetchone()
+        
+        if row:
+            if row['is_suspended']:
+                if row['suspended_until']:
+                    suspended_until = datetime.datetime.fromisoformat(row['suspended_until'])
+                    if datetime.datetime.now() < suspended_until:
+                        return None  # Still suspended
+                    # Suspension expired; lift it automatically
+                    conn.execute('''
+                        UPDATE users SET is_suspended = 0, suspended_until = NULL WHERE id = ?
+                    ''', (row['id'],))
+                else:
+                    return None
+            
+            # Update last login
+            conn.execute('''
+                UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?
+            ''', (row['id'],))
+            conn.commit()
+            
+            return dict(row)
+    return None
+
+def get_all_users(db_path=USER_DB_PATH):
+    """Get all users for admin management."""
+    _ensure_user_db(db_path)
+    with get_connection(db_path) as conn:
+        rows = conn.execute('''
+            SELECT id, username, is_suspended, suspended_until, created_at, last_login, created_by
+            FROM users
+            ORDER BY created_at DESC
+        ''').fetchall()
+    return [dict(r) for r in rows]
+
+def suspend_user(db_path=USER_DB_PATH, user_id=None, suspended_until=None):
+    """Suspend a user until a specific date."""
+    _ensure_user_db(db_path)
+    with get_connection(db_path) as conn:
+        conn.execute('''
+            UPDATE users SET is_suspended = 1, suspended_until = ? WHERE id = ?
+        ''', (suspended_until, user_id))
+        conn.commit()
+
+def unsuspend_user(db_path=USER_DB_PATH, user_id=None):
+    """Unsuspend a user."""
+    _ensure_user_db(db_path)
+    with get_connection(db_path) as conn:
+        conn.execute('''
+            UPDATE users SET is_suspended = 0, suspended_until = NULL WHERE id = ?
+        ''', (user_id,))
+        conn.commit()
+
+def delete_user(db_path=USER_DB_PATH, user_id=None):
+    """Delete a user."""
+    _ensure_user_db(db_path)
+    with get_connection(db_path) as conn:
+        conn.execute('DELETE FROM users WHERE id = ?', (user_id,))
+        conn.commit()
+
+def change_user_password(db_path=USER_DB_PATH, user_id=None, new_password=None):
+    """Change a user's password (admin function)."""
+    _ensure_user_db(db_path)
+    password_hash = hash_password(new_password)
+    with get_connection(db_path) as conn:
+        conn.execute('''
+            UPDATE users SET password_hash = ? WHERE id = ?
+        ''', (password_hash, user_id))
+        conn.commit()
