@@ -1,7 +1,8 @@
 import os
 from functools import wraps
-from flask import redirect, session, url_for
+from flask import redirect, session, url_for, request, flash
 from flask_dance.contrib.google import make_google_blueprint, google
+from utils.queries import authenticate_user
 
 # Allowed emails - set ALLOWED_EMAILS=a@gmail.com,b@gmail.com in environment
 ALLOWED_EMAILS = set(
@@ -43,17 +44,47 @@ def get_current_user():
     return session.get('user_info')
 
 
+def get_current_simple_user():
+    """Return simple user info from session."""
+    return session.get('simple_user')
+
+
+def is_admin():
+    """Check if current user is admin (Google OAuth user)."""
+    user = get_current_user()
+    if user and ALLOWED_EMAILS and user.get('email') in ALLOWED_EMAILS:
+        return True
+    return False
+
+
 def login_required(f):
-    """Decorator that blocks unauthenticated users and enforces the email whitelist."""
+    """Decorator that blocks unauthenticated users."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not google.authorized:
-            return redirect(google_auth_url())
-        if ALLOWED_EMAILS:
-            user = get_current_user()
-            if not user or user.get('email') not in ALLOWED_EMAILS:
-                session.pop("google_oauth_token", None)
-                session.pop("user_info", None)
-                return "Access denied", 403
+        # Check Google OAuth first
+        if google.authorized:
+            if ALLOWED_EMAILS:
+                user = get_current_user()
+                if not user or user.get('email') not in ALLOWED_EMAILS:
+                    session.pop("google_oauth_token", None)
+                    session.pop("user_info", None)
+                    return "Access denied", 403
+            return f(*args, **kwargs)
+        
+        # Check simple username/password login
+        if get_current_simple_user():
+            return f(*args, **kwargs)
+        
+        # Not authenticated
+        return redirect(url_for('login'))
+    return decorated_function
+
+
+def admin_required(f):
+    """Decorator that requires admin access (Google OAuth)."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not is_admin():
+            return "Admin access required", 403
         return f(*args, **kwargs)
     return decorated_function

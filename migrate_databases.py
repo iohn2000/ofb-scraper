@@ -94,6 +94,19 @@ def create_schema(conn):
         )
     ''')
 
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            username        TEXT NOT NULL UNIQUE,
+            password_hash   TEXT NOT NULL,
+            is_suspended    INTEGER DEFAULT 0,
+            suspended_until TEXT,
+            created_at      TEXT DEFAULT CURRENT_TIMESTAMP,
+            last_login      TEXT,
+            created_by      TEXT
+        )
+    ''')
+
     conn.commit()
 
 
