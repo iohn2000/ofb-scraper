@@ -1,50 +1,38 @@
 {% extends "base.html" %}
 
 {% block content %}
-<style>
-    /* Page-specific chart wrapper — avoids the global .chart-container max-height caps */
-    .goals-chart-scroll {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-    .goals-chart-inner {
-        position: relative;
-        min-width: 600px; /* prevent label crush on very narrow screens; scrolls instead */
-    }
-</style>
 <div class="row">
     <div class="col-12">
         <h1 class="mb-4">
-            <i class="fas fa-futbol text-success"></i> Total Goals Scored by Player
+            <i class="fas fa-futbol text-success"></i> Goals Scored by Player
         </h1>
-        <p class="text-muted mb-4">Aggregated goals scored across all games in the season. Shows offensive contribution and goal-scoring impact for each player.</p>
+        <p class="text-muted mb-4">View goals scored broken down by location (home/away) and season half. Use the filters in the sidebar to narrow down the results.</p>
         <div class="alert alert-light py-2 px-3 mb-3 team-season-info" role="alert"></div>
 
-        <!-- Chart card -->
-        <div class="card shadow mb-4">
-            <div class="card-body p-2 p-md-3">
-                <div class="goals-chart-scroll">
-                    <div class="goals-chart-inner" id="goalsChartInner">
-                        <canvas id="goalsChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <style>
+            th.sortable { cursor: pointer; user-select: none; }
+            th.sortable:hover { background-color: #fff !important; color: #000 !important; }
+            .sort-indicator { font-size: 11px; opacity: 0.7; }
+        </style>
 
-        <!-- Table card -->
+        <!-- Breakdown Table Card -->
         <div class="card shadow">
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-striped table-hover" id="goalsTable">
+                    <table class="table table-striped table-hover" id="goalsBreakdownTable">
                         <thead class="table-dark">
                             <tr>
-                                <th>Player</th>
-                                <th class="text-end">Goals Scored</th>
+                                <th class="sortable" data-col="player_name">Player <span class="sort-indicator" id="ind-player_name"></span></th>
+                                <th class="sortable text-center" data-col="home_1st">Home 1st Half <span class="sort-indicator" id="ind-home_1st"></span></th>
+                                <th class="sortable text-center" data-col="away_1st">Away 1st Half <span class="sort-indicator" id="ind-away_1st"></span></th>
+                                <th class="sortable text-center" data-col="home_2nd">Home 2nd Half <span class="sort-indicator" id="ind-home_2nd"></span></th>
+                                <th class="sortable text-center" data-col="away_2nd">Away 2nd Half <span class="sort-indicator" id="ind-away_2nd"></span></th>
+                                <th class="sortable text-center fw-bold" data-col="total">Total <span class="sort-indicator" id="ind-total"></span></th>
                             </tr>
                         </thead>
-                        <tbody id="goalsTableBody">
+                        <tbody id="goalsBreakdownTableBody">
                             <tr>
-                                <td colspan="2" class="text-center text-muted">
+                                <td colspan="6" class="text-center text-muted">
                                     <div class="spinner-border spinner-border-sm" role="status">
                                         <span class="visually-hidden">Loading...</span>
                                     </div>
@@ -62,38 +50,90 @@
 
 {% block scripts %}
 <script>
-    fetch('/api/goals' + getTeamParams())
-        .then(response => response.json())
-        .then(data => {
-            initHorizontalBarChart({
-                canvasId: 'goalsChart',
-                containerId: 'goalsChartInner',
-                labels: data.labels,
-                data: data.data,
-                datasetLabel: 'Total Goals Scored',
-                color: 'rgba(75, 192, 75, 0.8)',
-                borderColor: 'rgba(75, 192, 75, 1)',
-                xAxisTitle: 'Goals',
-                barPercentage: 0.6,
-                categoryPercentage: 0.7
-            });
+    let currentGoalsSortBy = 'player_name';
+    let currentGoalsSortDir = 'asc';
 
-            const tbody = document.getElementById('goalsTableBody');
-            if (data.labels.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">No data available</td></tr>';
-                return;
-            }
-            tbody.innerHTML = '';
-            data.labels.forEach((name, i) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${name}</td><td class="text-end">${data.data[i]}</td>`;
-                tbody.appendChild(tr);
-            });
-        })
-        .catch(error => {
-            console.error('Error fetching goals data:', error);
-            const tbody = document.getElementById('goalsTableBody');
-            tbody.innerHTML = '<tr><td colspan="2" class="text-center text-danger">Error loading data</td></tr>';
+    function compareGoals(a, b) {
+        const key = currentGoalsSortBy;
+        const aValue = a[key] ?? 0;
+        const bValue = b[key] ?? 0;
+
+        if (typeof aValue === 'string' || typeof bValue === 'string') {
+            return String(aValue).localeCompare(String(bValue), undefined, { numeric: true });
+        }
+
+        return aValue - bValue;
+    }
+
+    function sortGoalsData(data) {
+        data.sort((a, b) => {
+            const result = compareGoals(a, b);
+            return currentGoalsSortDir === 'asc' ? result : -result;
         });
+    }
+
+    function updateGoalsSortIndicators() {
+        document.querySelectorAll('.sort-indicator').forEach(el => { el.textContent = ''; });
+        const ind = document.getElementById('ind-' + currentGoalsSortBy);
+        if (ind) ind.textContent = currentGoalsSortDir === 'asc' ? ' ▲' : ' ▼';
+    }
+
+    function loadGoalsBreakdown() {
+        let apiUrl = '/api/goals/breakdown' + getTeamParams();
+
+        fetch(apiUrl)
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.getElementById('goalsBreakdownTableBody');
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No players with goals data</td></tr>';
+                    return;
+                }
+
+                sortGoalsData(data);
+                updateGoalsSortIndicators();
+
+                tbody.innerHTML = '';
+                data.forEach(player => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${player.player_name}</strong></td>
+                        <td class="text-center">${player.home_1st}</td>
+                        <td class="text-center">${player.away_1st}</td>
+                        <td class="text-center">${player.home_2nd}</td>
+                        <td class="text-center">${player.away_2nd}</td>
+                        <td class="text-center"><strong>${player.total}</strong></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching goals breakdown data:', error);
+                const tbody = document.getElementById('goalsBreakdownTableBody');
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error loading data</td></tr>';
+            });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('#goalsBreakdownTable th.sortable').forEach(th => {
+            th.style.cursor = 'pointer';
+            th.addEventListener('click', () => {
+                const col = th.dataset.col;
+                if (currentGoalsSortBy === col) {
+                    currentGoalsSortDir = currentGoalsSortDir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentGoalsSortBy = col;
+                    currentGoalsSortDir = 'asc';
+                }
+                loadGoalsBreakdown();
+            });
+        });
+    });
+    
+    // Load on page load
+    loadGoalsBreakdown();
+    
+    // Reload when filters change
+    window.addEventListener('goalsFiltersChanged', loadGoalsBreakdown);
 </script>
 {% endblock %}

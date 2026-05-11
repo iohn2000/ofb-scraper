@@ -38,22 +38,203 @@ def get_season_dates(db_path, team, year):
     return None, None
 
 
-def get_player_minutes(db_path=DEFAULT_DB, team="U13", date_from='2025-08-29', date_to='2026-06-08', club_id=1):
-    """Get total minutes played per player."""
+def _get_season_half(game_date_str):
+    """Determine which season half a game date falls into.
+    
+    First half (Herbst): July-February (months 8, 9, 10, 11, 12, 1)
+    Second half (Frühjahr): March-June (months 2, 3, 4, 5, 6. 7)
+    
+    Returns: 'first' or 'second'
+    """
+    from datetime import datetime
+    # Handle both date-only and datetime formats
+    try:
+        date_obj = datetime.strptime(game_date_str[:10], '%Y-%m-%d')
+    except:
+        date_obj = datetime.strptime(game_date_str, '%Y-%m-%d %H:%M:%S')
+    month = date_obj.month
+    
+    # First half (Herbst): July-February
+    if month in [7, 8, 9, 10, 11, 12, 1]:
+        return 'first'
+    # Second half (Frühjahr): March-June
+    else:
+        return 'second'
+
+
+def _determine_home_away(home_team, away_team, club_name):
+    """Determine if the club was home or away in a game.
+    Returns: 'H' if home, 'A' if away, None if neither (shouldn't happen)."""
+    if home_team and club_name.lower() in home_team.lower():
+        return 'H'
+    elif away_team and club_name.lower() in away_team.lower():
+        return 'A'
+    return None
+
+
+def get_player_goals_breakdown(db_path=DEFAULT_DB, team="U13", date_from='2025-08-29', date_to='2026-06-08', club_id=1, location=None, half=None):
+    """Get goals scored per player broken down by location (home/away) and season half.
+    
+    Args:
+        location: None (all), 'H' (home only), 'A' (away only)
+        half: None (all), 'first' (first half), 'second' (second half)
+    
+    Returns:
+        List of dicts: {player_name, home_1st, home_2nd, away_1st, away_2nd, total}
+    """
+    from datetime import datetime
+    
+    # Get club name and season info
     with get_connection(db_path) as conn:
-        rows = conn.execute('''
-            SELECT p.player_name, SUM(g.minutes_played) as total_minutes
+        club_row = conn.execute('SELECT name FROM clubs WHERE id = ?', (club_id,)).fetchone()
+        club_name = club_row['name'] if club_row else ''
+    
+    if not club_name:
+        return []
+    
+    # Get all players for this team
+    with get_connection(db_path) as conn:
+        players = conn.execute('''
+            SELECT DISTINCT p.player_id, p.player_name
             FROM players p
-            JOIN games g ON p.player_id = g.player_id AND g.club_id = p.club_id
-            WHERE g.game_date BETWEEN ? AND ?
-                AND g.age_group = ? AND p.team = ?
-                AND p.club_id = ? AND g.club_id = ?
-            GROUP BY p.player_id, p.player_name
-            ORDER BY total_minutes DESC
-        ''', (date_from, date_to, team, team, club_id, club_id)).fetchall()
+            WHERE p.team = ? AND p.club_id = ? AND p.season_year = (
+                SELECT season_year FROM seasons WHERE age_group = ? AND date_from = ? LIMIT 1
+            )
+            ORDER BY p.player_name ASC
+        ''', (team, club_id, team, date_from)).fetchall()
+    
+    result = []
+    for player in players:
+        player_id = player['player_id']
+        player_name = player['player_name']
+        
+        # Get all goals for this player
+        with get_connection(db_path) as conn:
+            games = conn.execute('''
+                SELECT g.goals, g.game_date, g.home_team, g.away_team
+                FROM games g
+                WHERE g.player_id = ? AND g.club_id = ?
+                    AND g.game_date BETWEEN ? AND ?
+                    AND g.age_group = ? AND g.goals > 0
+                ORDER BY g.game_date ASC
+            ''', (player_id, club_id, date_from, date_to, team)).fetchall()
+        
+        # Categorize goals
+        home_1st = 0
+        home_2nd = 0
+        away_1st = 0
+        away_2nd = 0
+        total = 0
+        
+        for game in games:
+            goals = game['goals'] or 0
+            game_date = game['game_date']
+            
+            # Determine home/away
+            loc = _determine_home_away(game['home_team'], game['away_team'], club_name)
+            if location and loc != location:
+                continue  # Skip if filtering by location and doesn't match
+            
+            # Determine first/second half using month-based logic
+            # First half (Herbst): July-February
+            # Second half (Frühjahr): March-June
+            game_half = _get_season_half(game_date)
+            if half and game_half != half:
+                continue  # Skip if filtering by half and doesn't match
+            
+            total += goals
+            if loc == 'H':
+                if game_half == 'first':
+                    home_1st += goals
+                else:
+                    home_2nd += goals
+            elif loc == 'A':
+                if game_half == 'first':
+                    away_1st += goals
+                else:
+                    away_2nd += goals
+        
+        result.append({
+            'player_name': player_name,
+            'home_1st': home_1st,
+            'home_2nd': home_2nd,
+            'away_1st': away_1st,
+            'away_2nd': away_2nd,
+            'total': total
+        })
+    
+    return result
+
+
+def get_player_minutes(db_path=DEFAULT_DB, team="U13", date_from='2025-08-29', date_to='2026-06-08', club_id=1, location=None, half=None):
+    """Get total minutes played per player.
+    
+    Args:
+        location: None (all), 'H' (home only), 'A' (away only)
+        half: None (all), 'first' (first half), 'second' (second half)
+    """
+    from datetime import datetime
+    
+    # Get club name
+    with get_connection(db_path) as conn:
+        club_row = conn.execute('SELECT name FROM clubs WHERE id = ?', (club_id,)).fetchone()
+        club_name = club_row['name'] if club_row else ''
+    
+    if not club_name:
+        return {'labels': [], 'data': []}
+    
+    # Get all players
+    with get_connection(db_path) as conn:
+        players = conn.execute('''
+            SELECT DISTINCT p.player_id, p.player_name
+            FROM players p
+            WHERE p.team = ? AND p.club_id = ? AND p.season_year = (
+                SELECT season_year FROM seasons WHERE age_group = ? AND date_from = ? LIMIT 1
+            )
+            ORDER BY p.player_name ASC
+        ''', (team, club_id, team, date_from)).fetchall()
+    
+    result_dict = {}
+    
+    for player in players:
+        player_id = player['player_id']
+        player_name = player['player_name']
+        
+        with get_connection(db_path) as conn:
+            games = conn.execute('''
+                SELECT g.minutes_played, g.game_date, g.home_team, g.away_team
+                FROM games g
+                WHERE g.player_id = ? AND g.club_id = ?
+                    AND g.game_date BETWEEN ? AND ?
+                    AND g.age_group = ? AND g.minutes_played > 0
+                ORDER BY g.game_date ASC
+            ''', (player_id, club_id, date_from, date_to, team)).fetchall()
+        
+        total_minutes = 0
+        for game in games:
+            # Filter by location if specified
+            if location:
+                loc = _determine_home_away(game['home_team'], game['away_team'], club_name)
+                if loc != location:
+                    continue
+            
+            # Filter by half if specified
+            if half:
+                game_half = _get_season_half(game['game_date'])
+                if game_half != half:
+                    continue
+            
+            total_minutes += game['minutes_played'] or 0
+        
+        if total_minutes > 0:
+            result_dict[player_name] = total_minutes
+    
+    # Sort by minutes descending
+    sorted_items = sorted(result_dict.items(), key=lambda x: x[1], reverse=True)
+    
     return {
-        'labels': [r['player_name'] for r in rows],
-        'data': [r['total_minutes'] or 0 for r in rows]
+        'labels': [name for name, _ in sorted_items],
+        'data': [minutes for _, minutes in sorted_items]
     }
 
 
@@ -265,21 +446,73 @@ def get_all_player_names(db_path=DEFAULT_DB, team="U13", date_from='2025-08-29',
     return [r['player_name'] for r in rows]
 
 
-def get_games_played_per_player(db_path=DEFAULT_DB, team="U13", date_from='2025-08-29', date_to='2026-06-08', club_id=1):
-    """Get the number of games played per player."""
+def get_games_played_per_player(db_path=DEFAULT_DB, team="U13", date_from='2025-08-29', date_to='2026-06-08', club_id=1, location=None, half=None):
+    """Get the number of games played per player.
+    
+    Args:
+        location: None (all), 'H' (home only), 'A' (away only)
+        half: None (all), 'first' (first half), 'second' (second half)
+    """
+    from datetime import datetime
+    
+    # Get club name
     with get_connection(db_path) as conn:
-        rows = conn.execute('''
-            SELECT p.player_name, COUNT(*) AS num_games
+        club_row = conn.execute('SELECT name FROM clubs WHERE id = ?', (club_id,)).fetchone()
+        club_name = club_row['name'] if club_row else ''
+    
+    if not club_name:
+        return []
+    
+    # Get all players
+    with get_connection(db_path) as conn:
+        players = conn.execute('''
+            SELECT DISTINCT p.player_id, p.player_name
             FROM players p
-            JOIN games g ON p.player_id = g.player_id AND g.club_id = p.club_id
-            WHERE g.game_date BETWEEN ? AND ?
-                AND g.age_group = ? AND p.team = ?
-                AND p.club_id = ? AND g.club_id = ?
-                AND g.minutes_played > 0
-            GROUP BY p.player_id, p.player_name
-            ORDER BY num_games DESC
-        ''', (date_from, date_to, team, team, club_id, club_id)).fetchall()
-    return [dict(r) for r in rows]
+            WHERE p.team = ? AND p.club_id = ? AND p.season_year = (
+                SELECT season_year FROM seasons WHERE age_group = ? AND date_from = ? LIMIT 1
+            )
+            ORDER BY p.player_name ASC
+        ''', (team, club_id, team, date_from)).fetchall()
+    
+    result = []
+    
+    for player in players:
+        player_id = player['player_id']
+        player_name = player['player_name']
+        
+        with get_connection(db_path) as conn:
+            games = conn.execute('''
+                SELECT g.game_date, g.home_team, g.away_team
+                FROM games g
+                WHERE g.player_id = ? AND g.club_id = ?
+                    AND g.game_date BETWEEN ? AND ?
+                    AND g.age_group = ? AND g.minutes_played > 0
+                ORDER BY g.game_date ASC
+            ''', (player_id, club_id, date_from, date_to, team)).fetchall()
+        
+        num_games = 0
+        for game in games:
+            # Filter by location if specified
+            if location:
+                loc = _determine_home_away(game['home_team'], game['away_team'], club_name)
+                if loc != location:
+                    continue
+            
+            # Filter by half if specified
+            if half:
+                game_half = _get_season_half(game['game_date'])
+                if game_half != half:
+                    continue
+            
+            num_games += 1
+        
+        if num_games > 0:
+            result.append({'player_name': player_name, 'num_games': num_games})
+    
+    # Sort by num_games descending
+    result.sort(key=lambda x: x['num_games'], reverse=True)
+    
+    return result
 
 
 # User management functions

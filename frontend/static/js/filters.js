@@ -22,11 +22,27 @@ function getSelectedYear() {
     return getUrlParam('year') || localStorage.getItem('selectedYear') || '2026';
 }
 
-/** Returns query string like "?club=1&team=U13&year=2026" */
+function getSelectedLocation() {
+    return getUrlParam('location') || localStorage.getItem('selectedLocation') || '';
+}
+
+function getSelectedHalf() {
+    return getUrlParam('half') || localStorage.getItem('selectedHalf') || '';
+}
+
+/** Returns query string like "?club=1&team=U13&year=2026&location=H&half=first" */
 function getTeamParams() {
-    return '?club=' + encodeURIComponent(getSelectedClub())
+    let params = '?club=' + encodeURIComponent(getSelectedClub())
         + '&team=' + encodeURIComponent(getSelectedTeam())
         + '&year=' + encodeURIComponent(getSelectedYear());
+    
+    const location = getSelectedLocation();
+    if (location) params += '&location=' + encodeURIComponent(location);
+    
+    const half = getSelectedHalf();
+    if (half) params += '&half=' + encodeURIComponent(half);
+    
+    return params;
 }
 
 function populateClubDropdown(clubs) {
@@ -96,13 +112,26 @@ function onFilterChange() {
     const club = document.getElementById('clubSelect').value;
     const team = document.getElementById('teamSelect').value;
     const year = document.getElementById('yearSelect').value;
+    const location = document.getElementById('locationSelect')?.value || '';
+    const half = document.getElementById('halfSelect')?.value || '';
+    
     localStorage.setItem('selectedClub', club);
     localStorage.setItem('selectedTeam', team);
     localStorage.setItem('selectedYear', year);
+    if (location) localStorage.setItem('selectedLocation', location);
+    else localStorage.removeItem('selectedLocation');
+    if (half) localStorage.setItem('selectedHalf', half);
+    else localStorage.removeItem('selectedHalf');
+    
     const url = new URL(window.location);
     url.searchParams.set('club', club);
     url.searchParams.set('team', team);
     url.searchParams.set('year', year);
+    if (location) url.searchParams.set('location', location);
+    else url.searchParams.delete('location');
+    if (half) url.searchParams.set('half', half);
+    else url.searchParams.delete('half');
+    
     window.location.href = url.toString();
 }
 
@@ -114,6 +143,13 @@ document.getElementById('teamSelect').addEventListener('change', function() {
 });
 document.getElementById('yearSelect').addEventListener('change', onFilterChange);
 
+// Event listeners for location and half filters (if they exist)
+const locationSelect = document.getElementById('locationSelect');
+if (locationSelect) locationSelect.addEventListener('change', onFilterChange);
+
+const halfSelect = document.getElementById('halfSelect');
+if (halfSelect) halfSelect.addEventListener('change', onFilterChange);
+
 // --- Load clubs and seasons on page load ---
 Promise.all([
     fetch('/api/clubs').then(r => r.json()),
@@ -121,6 +157,16 @@ Promise.all([
 ]).then(([clubs, seasons]) => {
     populateClubDropdown(clubs);
     populateDropdowns(seasons);
+    
+    // Set location and half filter selected values
+    const locationSelect = document.getElementById('locationSelect');
+    if (locationSelect) {
+        locationSelect.value = getSelectedLocation();
+    }
+    const halfSelect = document.getElementById('halfSelect');
+    if (halfSelect) {
+        halfSelect.value = getSelectedHalf();
+    }
 
     const club = getSelectedClub();
     const team = getSelectedTeam();

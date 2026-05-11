@@ -5,7 +5,7 @@ from utils.queries import (
     get_games_played_per_player, get_player_minutes, get_player_goals,
     get_player_efficiency, get_goal_efficiency_per_game, get_minutes_matrix,
     get_all_seasons, get_season_dates, get_player_overview, get_all_player_names,
-    get_all_clubs
+    get_all_clubs, get_player_goals_breakdown
 )
 from utils.ranking_fetcher import get_ranking, get_available_table_types
 
@@ -44,7 +44,9 @@ def api_seasons():
 @login_required
 def api_minutes():
     club_id, team, date_from, date_to = _get_filter_params()
-    return jsonify(get_player_minutes(DB_PATH, team=team, date_from=date_from, date_to=date_to, club_id=club_id))
+    location = request.args.get('location', None)
+    half = request.args.get('half', None)
+    return jsonify(get_player_minutes(DB_PATH, team=team, date_from=date_from, date_to=date_to, club_id=club_id, location=location, half=half))
 
 
 @api_bp.route('/api/goals')
@@ -52,6 +54,18 @@ def api_minutes():
 def api_goals():
     club_id, team, date_from, date_to = _get_filter_params()
     return jsonify(get_player_goals(DB_PATH, team=team, date_from=date_from, date_to=date_to, club_id=club_id))
+
+
+@api_bp.route('/api/goals/breakdown')
+@login_required
+def api_goals_breakdown():
+    club_id, team, date_from, date_to = _get_filter_params()
+    location = request.args.get('location', None)  # 'H' for home, 'A' for away, None for all
+    half = request.args.get('half', None)  # 'first', 'second', None for all
+    return jsonify(get_player_goals_breakdown(
+        DB_PATH, team=team, date_from=date_from, date_to=date_to, 
+        club_id=club_id, location=location, half=half
+    ))
 
 
 @api_bp.route('/api/efficiency')
@@ -72,7 +86,9 @@ def api_goal_efficiency():
 @login_required
 def api_games_played():
     club_id, team, date_from, date_to = _get_filter_params()
-    return jsonify(get_games_played_per_player(DB_PATH, team=team, date_from=date_from, date_to=date_to, club_id=club_id))
+    location = request.args.get('location', None)
+    half = request.args.get('half', None)
+    return jsonify(get_games_played_per_player(DB_PATH, team=team, date_from=date_from, date_to=date_to, club_id=club_id, location=location, half=half))
 
 
 @api_bp.route('/api/player-overview')
