@@ -40,8 +40,38 @@
                 </div>
             </div>
         </div>
-    </div>
-</div>
+
+        <!-- Goals Breakdown by Location and Half -->
+        <div class="card shadow mt-4">
+            <div class="card-body">
+                <h5 class="mb-3">Goals Breakdown by Location and Season Half</h5>
+                <p class="text-muted mb-3">Total goals scored broken down by home/away and first/second half of season</p>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover" id="goalsBreakdownTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Player</th>
+                                <th class="text-center">Home 1st Half</th>
+                                <th class="text-center">Home 2nd Half</th>
+                                <th class="text-center">Away 1st Half</th>
+                                <th class="text-center">Away 2nd Half</th>
+                                <th class="text-center fw-bold">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="goalsBreakdownTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">
+                                    <div class="spinner-border spinner-border-sm" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    Loading data...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 {% endblock %}
 
 {% block scripts %}
@@ -81,6 +111,37 @@
             console.error('Error fetching goal efficiency data:', error);
             const tbody = document.getElementById('goalEfficiencyTableBody');
             tbody.innerHTML = '<tr><td colspan="9" class="text-center text-danger">Error loading data</td></tr>';
+        });
+
+    // Fetch goals breakdown data and populate breakdown table
+    fetch('/api/goals/breakdown' + getTeamParams())
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('goalsBreakdownTableBody');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No data available</td></tr>';
+                return;
+            }
+
+            data.forEach(player => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${player.player_name}</strong></td>
+                    <td class="text-center">${player.home_1st}</td>
+                    <td class="text-center">${player.home_2nd}</td>
+                    <td class="text-center">${player.away_1st}</td>
+                    <td class="text-center">${player.away_2nd}</td>
+                    <td class="text-center"><strong>${player.total}</strong></td>
+                `;
+                tbody.appendChild(row);
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching goals breakdown data:', error);
+            const tbody = document.getElementById('goalsBreakdownTableBody');
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error loading data</td></tr>';
         });
 </script>
 {% endblock %}
