@@ -516,12 +516,16 @@ def get_games_played_per_player(db_path=DEFAULT_DB, team="U13", date_from='2025-
 
 
 # User management functions
-import hashlib
+import hashlib  # kept for legacy hash verification during migration
 import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 def hash_password(password):
-    """Hash a password using SHA-256."""
-    return hashlib.sha256(password.encode()).hexdigest()
+    return generate_password_hash(password, method='pbkdf2:sha256')
+
+def _is_legacy_hash(password_hash):
+    """Detect old unsalted SHA-256 hashes (64 lowercase hex chars)."""
+    return len(password_hash) == 64 and all(c in '0123456789abcdef' for c in password_hash)
 
 
 def _ensure_user_db(db_path=USER_DB_PATH):
@@ -560,35 +564,48 @@ def create_user(db_path=USER_DB_PATH, username=None, password=None, created_by=N
 def authenticate_user(db_path=USER_DB_PATH, username=None, password=None):
     """Authenticate a user and return user info if valid."""
     _ensure_user_db(db_path)
-    password_hash = hash_password(password)
     with get_connection(db_path) as conn:
         row = conn.execute('''
-            SELECT id, username, is_suspended, suspended_until, created_at
+            SELECT id, username, password_hash, is_suspended, suspended_until, created_at
             FROM users
-            WHERE username = ? AND password_hash = ?
-        ''', (username, password_hash)).fetchone()
-        
-        if row:
-            if row['is_suspended']:
-                if row['suspended_until']:
-                    suspended_until = datetime.datetime.fromisoformat(row['suspended_until'])
-                    if datetime.datetime.now() < suspended_until:
-                        return None  # Still suspended
-                    # Suspension expired; lift it automatically
-                    conn.execute('''
-                        UPDATE users SET is_suspended = 0, suspended_until = NULL WHERE id = ?
-                    ''', (row['id'],))
-                else:
-                    return None
-            
-            # Update last login
-            conn.execute('''
-                UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?
-            ''', (row['id'],))
-            conn.commit()
-            
-            return dict(row)
-    return None
+            WHERE username = ?
+        ''', (username,)).fetchone()
+
+        if not row:
+            return None
+
+        stored_hash = row['password_hash']
+        if _is_legacy_hash(stored_hash):
+            # Legacy unsalted SHA-256: verify then upgrade to PBKDF2
+            if hashlib.sha256(password.encode()).hexdigest() != stored_hash:
+                return None
+            conn.execute(
+                'UPDATE users SET password_hash = ? WHERE id = ?',
+                (hash_password(password), row['id'])
+            )
+        else:
+            if not check_password_hash(stored_hash, password):
+                return None
+
+        if row['is_suspended']:
+            if row['suspended_until']:
+                suspended_until = datetime.datetime.fromisoformat(row['suspended_until'])
+                if datetime.datetime.now() < suspended_until:
+                    return None  # Still suspended
+                # Suspension expired; lift it automatically
+                conn.execute('''
+                    UPDATE users SET is_suspended = 0, suspended_until = NULL WHERE id = ?
+                ''', (row['id'],))
+            else:
+                return None
+
+        conn.execute(
+            'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?',
+            (row['id'],)
+        )
+        conn.commit()
+
+        return {k: row[k] for k in ('id', 'username', 'is_suspended', 'suspended_until', 'created_at')}
 
 def get_all_users(db_path=USER_DB_PATH):
     """Get all users for admin management."""
