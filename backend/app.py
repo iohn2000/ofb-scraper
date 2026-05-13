@@ -2,13 +2,15 @@ import os
 import sys
 from datetime import timedelta
 from flask import Flask, render_template, redirect, session, request, flash, url_for
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_caching import Cache
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Add backend to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from auth import google_bp, google_auth_url, get_current_user, get_current_simple_user, login_required, admin_required
-from api import api_bp
 from utils.queries import authenticate_user, create_user, get_all_users, suspend_user, unsuspend_user, delete_user, change_user_password
 
 app = Flask(__name__,
@@ -31,6 +33,22 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=14)
 
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=[],
+    storage_uri='memory://'
+)
+
+# Cache configuration (1 hour TTL for API responses)
+cache = Cache(app, config={'CACHE_TYPE': 'simple', 'CACHE_DEFAULT_TIMEOUT': 3600})
+
+# Import api_bp AFTER cache is initialized
+from api import api_bp, set_cache
+
+# Inject cache into api module
+set_cache(cache)
+
 # Register blueprints
 app.register_blueprint(google_bp, url_prefix='/login')  # /login/google, /login/google/authorized
 app.register_blueprint(api_bp)                          # /api/*
@@ -48,6 +66,7 @@ def logout():
 
 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit('10 per minute', methods=['POST'])
 def login():
     if request.method == 'POST':
         username = request.form.get('username')
