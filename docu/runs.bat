@@ -1,6 +1,5 @@
 
 python .\scrape_games.py ".\data\player-json\Essling-U13-2026.json" --db data/club-stats.db --club-id 7
-
 python .\scrape_games.py ".\data\player-json\1210Wien-U13-2026.json" --db data/club-stats.db --club-id 6
 python .\scrape_games.py ".\data\player-json\Mannswoerth-U13-2026.json" --db data/club-stats.db --club-id 5
 python .\scrape_games.py .\data\player-json\1980Wien-U13-2026.json --db data/club-stats.db --club-id 4
